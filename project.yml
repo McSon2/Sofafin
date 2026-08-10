@@ -1,0 +1,118 @@
+name: Jellyflix
+options:
+  bundleIdPrefix: com.maximesaltet
+  deploymentTarget:
+    tvOS: "26.0"
+    macOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  JellyfinKit:
+    path: Packages/JellyfinKit
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: VOTREEQUIPE
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+
+targets:
+  Jellyflix-tvOS:
+    type: application
+    platform: tvOS
+    sources:
+      - path: Apps/tvOS/Sources
+      - path: Apps/tvOS/Resources
+        buildPhase: resources
+    dependencies:
+      - package: JellyfinKit
+        product: JellyfinKit
+      - target: JellyflixTopShelf
+        embed: true
+    info:
+      path: Apps/tvOS/Info.plist
+      properties:
+        CFBundleDisplayName: Jellyflix
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIUserInterfaceStyle: Dark
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+        NSLocalNetworkUsageDescription: >-
+          Jellyflix se connecte à votre serveur Jellyfin sur le réseau local
+          pour lire votre médiathèque.
+        NSBonjourServices:
+          - _jellyfin._tcp
+        # Reçoit les actions de l'étagère du haut : jellyflix://play/<id>
+        CFBundleURLTypes:
+          - CFBundleURLName: com.maximesaltet.jellyflix
+            CFBundleURLSchemes:
+              - jellyflix
+    entitlements:
+      path: Apps/tvOS/Jellyflix.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.maximesaltet.jellyflix
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.maximesaltet.jellyflix
+        TVOS_DEPLOYMENT_TARGET: "26.0"
+        # Catalogue produit par Tools/make_icons.py
+        ASSETCATALOG_COMPILER_APPICON_NAME: "App Icon & Top Shelf Image"
+
+  # Alimente l'étagère du haut de l'écran d'accueil tvOS. Processus séparé :
+  # il lit la session dans le groupe d'applications partagé.
+  JellyflixTopShelf:
+    # `app-extension`, et surtout **pas** `tv-app-extension` : ce dernier est le
+    # type hérité des extensions TVML et du `TVTopShelfProvider` déprécié. Avec lui,
+    # PlugInKit n'enregistre pas le bundle — le système lance bien le processus puis
+    # le tue aussitôt (« must have pid! Extension request will fail »), quel que soit
+    # le code qu'il contient. C'est le type qu'utilise l'exemple officiel d'Apple.
+    type: app-extension
+    platform: tvOS
+    sources:
+      - path: Apps/TopShelf/Sources
+    dependencies:
+      - package: JellyfinKit
+        product: JellyfinKit
+    info:
+      path: Apps/TopShelf/Info.plist
+      properties:
+        CFBundleDisplayName: Jellyflix Top Shelf
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.tv-top-shelf
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentProvider
+    entitlements:
+      path: Apps/TopShelf/JellyflixTopShelf.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.maximesaltet.jellyflix
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.maximesaltet.jellyflix.topshelf
+        TVOS_DEPLOYMENT_TARGET: "26.0"
+
+schemes:
+  Jellyflix-tvOS:
+    build:
+      targets:
+        Jellyflix-tvOS: all
+    run:
+      config: Debug
+      # Pré-remplit l'adresse du serveur quand on lance depuis Xcode — sur l'Apple TV
+      # comme sur le simulateur. Sans effet quand l'app est ouverte depuis le menu.
+      commandLineArguments:
+        "-serverAddress 192.168.1.10:8096": true
+    archive:
+      config: Release

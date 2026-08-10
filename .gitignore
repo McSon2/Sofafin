@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Projet Xcode : généré par `xcodegen generate` depuis project.yml.
+# Le versionner ferait diverger deux sources de vérité.
+*.xcodeproj/
+*.xcworkspace/
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/*/Package.resolved
+
+# Divers
+*.log

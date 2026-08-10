@@ -1,0 +1,80 @@
+import AVKit
+import JellyfinKit
+import SwiftUI
+
+/// Lecture plein écran.
+///
+/// Tout le travail est dans `PlaybackEngine` : cette vue ne fait que présenter le
+/// contrôleur d'AVKit, le relier au moteur, et couvrir l'attente initiale.
+struct PlayerView: View {
+    @Environment(AppSession.self) private var session
+    @Environment(\.dismiss) private var dismiss
+
+    let item: MediaItem
+    /// Position imposée (reprise choisie dans une fiche, par exemple).
+    var startTime: Double?
+
+    @State private var engine = PlaybackEngine()
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            // Le conteneur existe dès le premier instant et ne repart jamais :
+            // c'est ce qui permet d'enchaîner les épisodes dans le même lecteur.
+            PlayerContainer(engine: engine)
+                .ignoresSafeArea()
+
+            if case .failed(let message) = engine.phase {
+                VStack(spacing: 26) {
+                    EmptyStateView(
+                        icon: "exclamationmark.triangle.fill",
+                        title: "Lecture impossible",
+                        message: message
+                    )
+                    Button("Fermer") { dismiss() }
+                        .buttonStyle(.glass)
+                }
+            } else if engine.context == nil {
+                VStack(spacing: 24) {
+                    ProgressView().tint(.white).scaleEffect(1.6)
+                    Text("Préparation de la lecture…")
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(Theme.Palette.secondaryText)
+                }
+            }
+        }
+        .task {
+            engine.configure(client: session.api)
+            engine.onDismiss = { dismiss() }
+            await engine.start(item, startTime: startTime)
+        }
+        .onDisappear {
+            // Rafraîchir seulement après que le serveur a enregistré la position :
+            // « Reprendre la lecture » afficherait sinon l'état d'avant la séance.
+            Task {
+                await engine.finish()
+                session.libraryDidChange()
+            }
+        }
+    }
+}
+
+// MARK: - Pont AVKit
+
+private struct PlayerContainer: UIViewControllerRepresentable {
+    let engine: PlaybackEngine
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = engine.player
+        controller.delegate = engine
+        controller.allowsPictureInPicturePlayback = true
+        controller.videoGravity = .resizeAspect
+        // Le moteur pose ses affordances dessus dès qu'il en connaît le titre.
+        engine.controller = controller
+        return controller
+    }
+
+    func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {}
+}
