@@ -65,6 +65,43 @@ public enum DeviceProfileFactory {
                     transcodeSeekInfo: nil
                 )
             ],
+            // L'Apple TV 4K affiche nativement HDR10, HLG et Dolby Vision. Le
+            // déclarer est ce qui empêche le serveur de convertir en SDR : sans
+            // ces conditions, il « aplatit » chaque film HDR, ce qui l'oblige à
+            // réencoder le 4K au lieu de le remuxer — et échoue si sa chaîne de
+            // conversion matérielle n'est pas au complet.
+            //
+            // `IsRequired: false` est délibéré : la condition dit ce qu'on **sait
+            // rendre**, elle n'exige rien du serveur. À `true`, un fichier dont le
+            // type de plage n'est pas reconnu serait refusé au lieu d'être servi.
+            codecProfiles: [
+                CodecProfile(
+                    type: "Video",
+                    codec: "hevc",
+                    conditions: [
+                        ProfileCondition(
+                            condition: "EqualsAny",
+                            property: "VideoRangeType",
+                            value: "SDR|HDR10|HLG|HDR10Plus|DOVI|DOVIWithHDR10|DOVIWithHLG|DOVIWithSDR",
+                            isRequired: false
+                        )
+                    ]
+                ),
+                // Le H.264 ne transporte pas de HDR en pratique, mais la condition
+                // évite que le serveur s'interroge sur un fichier mal étiqueté.
+                CodecProfile(
+                    type: "Video",
+                    codec: "h264",
+                    conditions: [
+                        ProfileCondition(
+                            condition: "EqualsAny",
+                            property: "VideoRangeType",
+                            value: "SDR",
+                            isRequired: false
+                        )
+                    ]
+                )
+            ],
             subtitleProfiles: [
                 // Livrés dans le flux HLS quand on transcode…
                 SubtitleProfile(format: "vtt", method: "Hls"),
@@ -88,6 +125,7 @@ public struct DeviceProfile: Codable, Sendable {
     public let maxStaticBitrate: Int
     public let directPlayProfiles: [DirectPlayProfile]
     public let transcodingProfiles: [TranscodingProfile]
+    public let codecProfiles: [CodecProfile]
     public let subtitleProfiles: [SubtitleProfile]
 
     enum CodingKeys: String, CodingKey {
@@ -96,7 +134,41 @@ public struct DeviceProfile: Codable, Sendable {
         case maxStaticBitrate = "MaxStaticBitrate"
         case directPlayProfiles = "DirectPlayProfiles"
         case transcodingProfiles = "TranscodingProfiles"
+        case codecProfiles = "CodecProfiles"
         case subtitleProfiles = "SubtitleProfiles"
+    }
+}
+
+/// Ce qu'un codec donné est capable de rendre chez nous.
+///
+/// Sans profil de codec, le serveur ne suppose **rien** : il ignore que l'appareil
+/// sait afficher du HDR et se croit obligé de le convertir en SDR. Cette
+/// conversion — le *tone mapping* — est la cause d'un long détour : elle interdit
+/// la copie du flux vidéo, impose un réencodage complet du 4K, et échoue si la
+/// chaîne matérielle du serveur n'est pas parfaitement en place.
+public struct CodecProfile: Codable, Sendable {
+    public let type: String
+    public let codec: String
+    public let conditions: [ProfileCondition]
+
+    enum CodingKeys: String, CodingKey {
+        case type = "Type"
+        case codec = "Codec"
+        case conditions = "Conditions"
+    }
+}
+
+public struct ProfileCondition: Codable, Sendable {
+    public let condition: String
+    public let property: String
+    public let value: String
+    public let isRequired: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case condition = "Condition"
+        case property = "Property"
+        case value = "Value"
+        case isRequired = "IsRequired"
     }
 }
 
