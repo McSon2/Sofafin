@@ -94,34 +94,57 @@ jobs:
 
       - name: Aucune chaîne visible non traduite
         run: |
-          python3 - <<'PY'
+          python3 - <<'SCRIPT'
           import json, pathlib, re, sys
           keys = set()
           for c in ["Apps/tvOS/Resources/Localizable.xcstrings",
                     "Packages/JellyfinKit/Sources/JellyfinKit/Resources/Localizable.xcstrings"]:
               keys |= set(json.loads(pathlib.Path(c).read_text())["strings"])
-          # Un littéral français affiché doit être soit une clé connue, soit
-          # enveloppé dans une forme que le système sait traduire.
-          wrapper = re.compile(r'(\bL\(|Text\(|Label\(|Button\(|TextField\(|SecureField\('
-                               r'|localized:|title:|titled:|message:|prompt:|separator:'
-                               r'|accessibility(Label|Hint|Value)\()\s*$')
-          french = re.compile(r'[éèêëàâùûôîïçÉÈÀÇ]')
-          logging = re.compile(r'jellyfinLog\.|privacy:\s*\.|preconditionFailure')
+          # Seules les sources livrées sont concernées : les noms de tests ne
+          # s'affichent nulle part, et les noms de langues restent dans la leur.
+          roots = [pathlib.Path("Apps"), pathlib.Path("Packages/JellyfinKit/Sources")]
+          skip_file = re.compile(r"/Tests/|Localization\.swift$")
+          wrapper = re.compile(r"(\bL\(|Text\(|Label\(|Button\(|TextField\(|SecureField\("
+                               r"|localized:|title:|titled:|message:|prompt:|separator:"
+                               r"|accessibility(Label|Hint|Value)\()\s*$")
+          # Un accent trahit le français, mais « Films » ou « Rechercher » n'en
+          # ont pas : on y ajoute les mots outils, qui n'apparaissent pas dans
+          # une clé d'API ni dans un identifiant.
+          french = re.compile(
+              r"[éèêëàâùûôîïçÉÈÀÇ]|\b(le|la|les|un|une|des|du|de|et|ou|pour|sur|dans"
+              r"|avec|sans|par|au|aux|ce|cette|ces|qui|que|pas|plus|tout|tous|aucun"
+              r"|aucune|Voir|Lecture|Reprendre|Serveur|Adresse|Utilisateur|Titre|Note"
+              r"|Films|Rechercher|Version|Langue|Fermer|Quitter|Annuler)\b", re.I)
+          # Ni les journaux ni les messages d'arrêt ne s'adressent à l'utilisateur.
+          ignore_ctx = re.compile(r"jellyfinLog\.|privacy:\s*\.|preconditionFailure|origin:")
+          # Ce que la détection ne peut pas distinguer seule, et qui n'est pas
+          # affiché : fragments d'interpolation imbriquée dont la clé complète
+          # est traduite, valeurs de repli des journaux, en-têtes HTTP.
+          allowed = {
+              ", rating)) sur 10", ", community)) sur 10",
+              "sans description", "sans commentaire", "aucune",
+          }
           bad = []
-          for f in list(pathlib.Path("Apps").rglob("*.swift")) + list(pathlib.Path("Packages").rglob("*.swift")):
-              lines = f.read_text().splitlines()
-              for i, line in enumerate(lines, 1):
-                  if line.strip().startswith(("//", "///", "*")): continue
-                  if logging.search("\n".join(lines[max(0, i-4):i+1])): continue
-                  for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', line):
-                      s = m.group(1)
-                      if len(s) < 3 or not french.search(s): continue
-                      if s in keys or wrapper.search(line[:m.start()]): continue
-                      bad.append(f"{f}:{i}  {s[:60]!r}")
+          for root in roots:
+              for f in root.rglob("*.swift"):
+                  if skip_file.search(str(f)): continue
+                  lines = f.read_text().splitlines()
+                  for i, line in enumerate(lines, 1):
+                      st = line.strip()
+                      if st.startswith(("//", "///", "*")): continue
+                      # `case version = "Version"` nomme une clé JSON, pas un
+                      # texte d'écran.
+                      if re.match(r'case\s+\w+\s*=\s*"', st): continue
+                      if ignore_ctx.search("\n".join(lines[max(0, i-4):i+1])): continue
+                      for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', line):
+                          t = m.group(1)
+                          if len(t) < 3 or not french.search(t): continue
+                          if t in keys or t in allowed: continue
+                          if "identity.version" in t or wrapper.search(line[:m.start()]): continue
+                          bad.append(f"{f}:{i}  {t[:60]!r}")
           if bad:
               print("::error::Chaînes visibles non traduites :")
               for b in bad: print("  ", b)
               sys.exit(1)
           print("Toutes les chaînes visibles sont traduites.")
-          PY
-
+          SCRIPT
