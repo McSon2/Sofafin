@@ -91,9 +91,11 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     /// clignoter et lui volerait le focus.
     var offeredSegmentId: String?
     private var hasStopped = false
-    /// La variante retenue n'est journalisée qu'une fois par lecture : le
-    /// battement passe toutes les 250 ms et en noierait le journal.
-    var hasLoggedVariant = false
+    /// Passe à vrai à la première image réellement affichée. Sert à ne pas
+    /// rapporter une position nulle avant que la lecture n'ait commencé, et à ne
+    /// journaliser la variante retenue qu'une fois : le battement passe toutes
+    /// les 250 ms et en noierait le journal.
+    var hasStartedPlaying = false
 
     // MARK: Cycle de vie
 
@@ -211,7 +213,7 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         let newContext = PlaybackContext(plan: plan, segments: segments, nextEpisode: next, siblings: siblings)
         context = newContext
         hasStopped = false
-        hasLoggedVariant = false
+        hasStartedPlaying = false
 
         let playerItem = AVPlayerItem(asset: AVURLAsset(url: plan.url))
         playerItem.externalMetadata = Self.metadata(for: full)
@@ -299,6 +301,12 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     /// La timeline couvre le média entier dans tous les modes : le temps écoulé
     /// est directement la position dans le film.
     private var currentPosition: Double {
+        // Avant la première image, le lecteur annonce zéro. Rapporter ce zéro au
+        // serveur efface la reprise : une lecture qui échoue ferait alors perdre
+        // sa place à l'utilisateur, en plus de ne pas démarrer — et il la
+        // retrouverait au début du film sans comprendre pourquoi. Tant que rien
+        // n'a été lu, la position est celle d'où l'on partait.
+        guard hasStartedPlaying else { return context?.plan.startTime ?? lastPosition }
         let seconds = player.currentTime().seconds
         return seconds.isFinite ? seconds : lastPosition
     }
@@ -336,8 +344,8 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
                     // La première image est arrivée : plus rien à surveiller.
                     if self.player.timeControlStatus == .playing {
                         self.cancelStartWatchdog()
-                        if let item = self.player.currentItem, !self.hasLoggedVariant {
-                            self.hasLoggedVariant = true
+                        if let item = self.player.currentItem, !self.hasStartedPlaying {
+                            self.hasStartedPlaying = true
                             self.logSelectedVariant(of: item)
                         }
                     }
