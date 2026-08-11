@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 import JellyfinKit
+import UniformTypeIdentifiers
 
 /// Réécrit la playlist maître avant qu'AVPlayer ne la lise.
 ///
@@ -75,10 +76,35 @@ final class PlaybackManifestRewriter: NSObject, AVAssetResourceLoaderDelegate {
                 loadingRequest.finishLoading(with: error ?? URLError(.cannotParseResponse))
                 return
             }
-            let rewritten = HLSManifest.keepingOnlyFirstVariant(of: manifest, relativeTo: original)
-            loadingRequest.contentInformationRequest?.contentType = "application/vnd.apple.mpegurl"
-            loadingRequest.contentInformationRequest?.isByteRangeAccessSupported = false
-            loadingRequest.dataRequest?.respond(with: Data(rewritten.utf8))
+            let payload = Data(
+                HLSManifest.keepingOnlyFirstVariant(of: manifest, relativeTo: original).utf8
+            )
+
+            if let information = loadingRequest.contentInformationRequest {
+                // Un **type uniforme**, pas un type MIME : la documentation
+                // d'AVFoundation prévient qu'un type que le système ne reconnaît
+                // pas comme un format lisible fait échouer la lecture. Servir
+                // `application/vnd.apple.mpegurl` ici donne un
+                // AVFoundationErrorDomain -11868 sans autre explication.
+                information.contentType = UTType.m3uPlaylist.identifier
+                information.contentLength = Int64(payload.count)
+                information.isByteRangeAccessSupported = true
+            }
+
+            if let request = loadingRequest.dataRequest {
+                // Le lecteur demande une plage, pas forcément la totalité : lui
+                // répondre depuis le début décalerait tout ce qui suit.
+                let offset = Int(request.currentOffset)
+                guard offset <= payload.count else {
+                    loadingRequest.finishLoading(with: URLError(.badServerResponse))
+                    return
+                }
+                let length = request.requestsAllDataToEndOfResource
+                    ? payload.count - offset
+                    : min(request.requestedLength, payload.count - offset)
+                request.respond(with: payload.subdata(in: offset ..< offset + length))
+            }
+
             loadingRequest.finishLoading()
         }.resume()
 
