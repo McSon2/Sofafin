@@ -1,5 +1,6 @@
 {
   "name": "Sofafin",
   "subtitle": "Your Jellyfin, from the couch",
-  "privacyPolicyUrl": "https://maximesaltet.com/sofafin/privacy"
+  "privacyPolicyUrl": "https://maximesaltet.com/sofafin/privacy",
+  "privacyPolicyText": "SOFAFIN — PRIVACY POLICY\n\nIN SHORT\nSofafin does not collect, store, sell or share any personal data.\n\nDATA WE COLLECT\nNone. The app contains no analytics, no advertising networks and no tracking SDKs.\n\nYOUR SERVER, YOUR DATA\nEverything Sofafin displays comes from the Jellyfin server you connect to and host yourself. The app reads your library from it and writes your playback progress back to it. Neither the developer nor any third party has access to that server.\n\nDATA KEPT ON YOUR APPLE TV\n— your session: server address, user identifier and access token, stored in the device keychain;\n— your preferences: last open tab, interface language, recent searches;\n— an image cache, so artwork is not downloaded again and again.\nThis data never leaves the device and is removed when the app is uninstalled.\n\nNETWORK CONNECTIONS\nThe app connects only to the address you enter. It makes no other request.\n\nCHILDREN\nSofafin is not directed at children and collects no data about them.\n\nCHANGES\nAny change to this policy is dated on the published page at https://maximesaltet.com/sofafin/privacy\n\nCONTACT\nhello@maximesaltet.com"
 }
