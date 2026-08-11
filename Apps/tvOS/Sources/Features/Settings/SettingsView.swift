@@ -42,16 +42,24 @@ struct SettingsView: View {
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 18) {
             row("Utilisateur", session.user?.name ?? "—")
-            Divider().overlay(Theme.Palette.separator)
+            separator
             row("Serveur", serverInfo?.serverName ?? session.serverName ?? "—")
-            Divider().overlay(Theme.Palette.separator)
+            separator
             row("Adresse", session.serverURL?.absoluteString ?? "—")
-            Divider().overlay(Theme.Palette.separator)
+            separator
             row("Version Jellyfin", serverInfo?.version ?? "—")
         }
         .padding(34)
         .frame(maxWidth: 1100, alignment: .leading)
         .liquidGlass(cornerRadius: 24)
+    }
+
+    /// `Divider` trace une ligne d'un point, invisible sur un téléviseur : on la
+    /// remplace par un rectangle à l'épaisseur plancher du thème.
+    private var separator: some View {
+        Rectangle()
+            .fill(Theme.Palette.separator)
+            .frame(height: Theme.Metrics.hairline)
     }
 
     private func row(_ label: String, _ value: String) -> some View {
@@ -64,6 +72,9 @@ struct SettingsView: View {
                 .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Palette.primaryText)
         }
+        // Deux textes séparés par un ressort seraient annoncés comme deux
+        // éléments sans lien : « Serveur » d'un côté, un nom de l'autre.
+        .accessibilityElement(children: .combine)
     }
 
     private var appVersion: String {

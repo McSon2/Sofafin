@@ -23,7 +23,12 @@ struct ConnectView: View {
 
 /// Fond animé discret : deux halos colorés qui évitent l'écran noir vide,
 /// et donnent au verre de quoi réfracter.
+///
+/// La dérive est purement décorative et tourne en boucle sans fin : c'est
+/// exactement ce que « Réduire les animations » demande de couper. Les halos
+/// restent, figés à leur position de départ.
 struct BackdropAtmosphere: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var drift = false
 
     var body: some View {
@@ -43,7 +48,9 @@ struct BackdropAtmosphere: View {
                 .offset(x: drift ? 320 : 220, y: drift ? 220 : 300)
         }
         .ignoresSafeArea()
+        .accessibilityHidden(true)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) {
                 drift = true
             }
@@ -76,6 +83,7 @@ private struct ServerStepView: View {
                         endPoint: .bottomTrailing
                     )
                 )
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
 
@@ -157,7 +165,9 @@ private struct SignInStepView: View {
     var body: some View {
         HStack(spacing: 70) {
             quickConnectPanel
-            Divider().frame(height: 420).overlay(Theme.Palette.separator)
+            Rectangle()
+                .fill(Theme.Palette.separator)
+                .frame(width: Theme.Metrics.hairline, height: 420)
             credentialsPanel
         }
         .padding(70)
@@ -168,8 +178,9 @@ private struct SignInStepView: View {
     private var quickConnectPanel: some View {
         VStack(spacing: 26) {
             Image(systemName: "bolt.horizontal.circle.fill")
-                .font(.system(size: 60))
+                .font(.system(size: 60, weight: .medium))
                 .foregroundStyle(Theme.Palette.accentBright)
+                .accessibilityHidden(true)
 
             Text("Connexion rapide")
                 .font(Theme.Font.sectionTitle)
@@ -183,6 +194,13 @@ private struct SignInStepView: View {
                     .padding(.horizontal, 40)
                     .padding(.vertical, 24)
                     .liquidGlass(cornerRadius: 20, isHighlighted: true)
+                    // « 428913 » se lirait « quatre cent vingt-huit mille… » :
+                    // inutilisable pour recopier un code sur un autre appareil.
+                    // Séparé par des virgules, il est énoncé chiffre par chiffre.
+                    .accessibilityLabel(
+                        "Code de connexion rapide : "
+                            + code.map(String.init).joined(separator: ", ")
+                    )
 
                 Text("Saisis ce code dans Jellyfin depuis un autre appareil :\nProfil → Connexion rapide.")
                     .font(Theme.Font.caption)
@@ -227,7 +245,7 @@ private struct SignInStepView: View {
 
             Button(action: signIn) {
                 Text(isSigningIn ? "Connexion…" : "Se connecter")
-                    .font(Theme.Font.cardTitle)
+                    .font(Theme.Font.button)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glass)

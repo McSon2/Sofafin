@@ -10,11 +10,13 @@ struct PersonView: View {
     @State private var items: [MediaItem] = []
     @State private var isLoading = true
     @State private var pushedItem: MediaItem?
-    @State private var playbackTarget: MediaItem?
+    @State private var playback: PlaybackRequest?
+    @State private var resumeCandidate: MediaItem?
+    @Namespace private var gridFocus
 
     private let columns = Array(
         repeating: GridItem(.fixed(Theme.Metrics.posterWidth), spacing: Theme.Metrics.cardSpacing),
-        count: 6
+        count: Theme.Metrics.gridColumns
     )
 
     var body: some View {
@@ -36,13 +38,15 @@ struct PersonView: View {
                     grid
                 }
             }
+            .focusScope(gridFocus)
         }
         .navigationDestination(item: $pushedItem) { item in
             DetailView(item: item)
         }
-        .fullScreenCover(item: $playbackTarget) { item in
-            PlayerView(item: item)
+        .fullScreenCover(item: $playback) { request in
+            PlayerView(item: request.item, startTime: request.startTime)
         }
+        .resumeChoice(for: $resumeCandidate) { playback = $0 }
         .task(id: session.libraryRevision) { await load() }
     }
 
@@ -79,8 +83,9 @@ struct PersonView: View {
     private var grid: some View {
         ScrollView(.vertical) {
             LazyVGrid(columns: columns, spacing: 46) {
-                ForEach(items) { item in
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     PosterCard(item: item, onOpenDetails: { pushedItem = item }) { select(item) }
+                        .prefersDefaultFocus(index == 0, in: gridFocus)
                 }
             }
             .padding(.horizontal, Theme.Metrics.screenPadding)
@@ -88,9 +93,13 @@ struct PersonView: View {
         }
     }
 
+    /// Même geste, même réponse que partout ailleurs : un titre entamé demande où
+    /// reprendre. Cet écran lançait la lecture sans poser la question, ce qui
+    /// donnait au même clic deux comportements selon l'endroit d'où on le faisait
+    /// — et repartait du début quand l'utilisateur voulait reprendre.
     private func select(_ item: MediaItem) {
         if item.resumePosition != nil {
-            playbackTarget = item
+            resumeCandidate = item
         } else {
             pushedItem = item
         }

@@ -15,6 +15,11 @@ struct LibraryView: View {
     @State private var playback: PlaybackRequest?
     @State private var resumeCandidate: MediaItem?
     @State private var totalCount = 0
+    @State private var loadFailure: String?
+    /// Portée de focus de l'écran : sans cible désignée, le moteur ouvre la
+    /// bibliothèque sur le menu « Trier par » — la barre de filtres étant dessinée
+    /// avant la grille — au lieu de la première affiche.
+    @Namespace private var gridFocus
 
     enum SortOption: String, CaseIterable, Identifiable {
         case dateAdded, title, year, rating
@@ -69,7 +74,7 @@ struct LibraryView: View {
 
     private let columns = Array(
         repeating: GridItem(.fixed(Theme.Metrics.posterWidth), spacing: Theme.Metrics.cardSpacing),
-        count: 6
+        count: Theme.Metrics.gridColumns
     )
 
     var body: some View {
@@ -99,6 +104,13 @@ struct LibraryView: View {
 
                     if isLoading {
                         LoadingView()
+                    } else if let loadFailure {
+                        EmptyStateView(
+                            icon: "wifi.exclamationmark",
+                            title: "Serveur injoignable",
+                            message: loadFailure,
+                            onRetry: { session.libraryDidChange() }
+                        )
                     } else if items.isEmpty {
                         EmptyStateView(
                             icon: "tray",
@@ -109,6 +121,7 @@ struct LibraryView: View {
                         grid
                     }
                 }
+                .focusScope(gridFocus)
             }
             .navigationDestination(for: MediaItem.self) { item in
                 DetailView(item: item)
@@ -118,11 +131,19 @@ struct LibraryView: View {
             PlayerView(item: request.item, startTime: request.startTime)
         }
         .resumeChoice(for: $resumeCandidate) { playback = $0 }
-        .task(id: reloadKey) { await load() }
+        // Deux clés distinctes, parce que les deux causes n'appellent pas le même
+        // traitement : changer de tri ou de filtre remplace le contenu et justifie
+        // un indicateur de chargement ; une révision de bibliothèque — un « vu »,
+        // un favori — ne doit rien démonter.
+        .task(id: queryKey) { await load(silently: false) }
+        .task(id: session.libraryRevision) {
+            guard !items.isEmpty else { return }
+            await load(silently: true)
+        }
     }
 
-    private var reloadKey: String {
-        "\(library.id)-\(sort.rawValue)-\(ascending)-\(watchFilter.rawValue)-\(session.libraryRevision)"
+    private var queryKey: String {
+        "\(library.id)-\(sort.rawValue)-\(ascending)-\(watchFilter.rawValue)"
     }
 
     private var toolbar: some View {
@@ -150,6 +171,11 @@ struct LibraryView: View {
         .padding(.horizontal, Theme.Metrics.screenPadding)
         .padding(.top, 30)
         .padding(.bottom, 20)
+        // Les menus sont calés à droite : sans section de focus, remonter depuis
+        // une affiche de la colonne de gauche ne trouve aucune cible au-dessus
+        // d'elle et le focus reste coincé dans la grille. C'est exactement le
+        // repli que `MediaRow` déclare pour les rangées horizontales.
+        .focusSection()
     }
 
     private var countLabel: String {
@@ -199,8 +225,10 @@ struct LibraryView: View {
     private var grid: some View {
         ScrollView(.vertical) {
             LazyVGrid(columns: columns, spacing: 46) {
-                ForEach(items) { item in
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     PosterCard(item: item, onOpenDetails: { path.append(item) }) { select(item) }
+                        // La première affiche est la cible d'ouverture de l'écran.
+                        .prefersDefaultFocus(index == 0, in: gridFocus)
                 }
             }
             .padding(.horizontal, Theme.Metrics.screenPadding)
@@ -233,23 +261,41 @@ struct LibraryView: View {
         }
     }
 
-    private func load() async {
-        isLoading = true
+    /// `silently` : recharger sans vider la grille. Un « marquer comme vu » depuis
+    /// le menu d'une vignette faisait jusqu'ici disparaître les affiches derrière
+    /// un indicateur de chargement, et le focus repartait de la première case.
+    private func load(silently: Bool) async {
+        isLoading = !silently && items.isEmpty
+        if !silently { loadFailure = nil }
+
         let filters = watchFilter == .favorites ? ["IsFavorite"] : []
-        let response = try? await session.api.items(
-            parentId: library.id,
-            includeTypes: includedTypes,
-            sortBy: sort.field,
-            sortOrder: ascending ? "Ascending" : "Descending",
-            filters: isCollectionLibrary ? [] : filters,
-            isPlayed: isCollectionLibrary ? nil : watchFilter.isPlayed,
-            limit: 300,
-            // Le nombre de titres tient lieu de sous-titre sous une affiche de
-            // collection, l'année étant presque toujours absente.
-            fields: isCollectionLibrary ? ItemFieldSet.list + ",ChildCount" : ItemFieldSet.list
-        )
-        items = response?.items ?? []
-        totalCount = response?.totalRecordCount ?? items.count
+        do {
+            let response = try await session.api.items(
+                parentId: library.id,
+                includeTypes: includedTypes,
+                sortBy: sort.field,
+                sortOrder: ascending ? "Ascending" : "Descending",
+                filters: isCollectionLibrary ? [] : filters,
+                isPlayed: isCollectionLibrary ? nil : watchFilter.isPlayed,
+                limit: 300,
+                // Le nombre de titres tient lieu de sous-titre sous une affiche de
+                // collection, l'année étant presque toujours absente.
+                fields: isCollectionLibrary ? ItemFieldSet.list + ",ChildCount" : ItemFieldSet.list
+            )
+            guard !Task.isCancelled else { return }
+            let received = response.items ?? []
+            items = received
+            totalCount = response.totalRecordCount ?? received.count
+            loadFailure = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            guard !Task.isCancelled else { return }
+            // Un rafraîchissement de fond qui échoue laisse la grille en place :
+            // l'utilisateur n'a rien demandé, lui retirer son contenu serait pire
+            // que de lui montrer un état d'un instant périmé.
+            if !silently { loadFailure = error.localizedDescription }
+        }
         isLoading = false
     }
 }

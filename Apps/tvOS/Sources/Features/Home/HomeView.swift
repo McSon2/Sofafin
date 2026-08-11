@@ -8,10 +8,18 @@ struct HomeView: View {
 
     @State private var model = HomeModel()
     @State private var spotlight: MediaItem?
+    /// Dernière vignette effleurée, pas encore promue au billboard — voir
+    /// `spotlightDebounce`.
+    @State private var spotlightCandidate: MediaItem?
     @State private var playback: PlaybackRequest?
     @State private var resumeCandidate: MediaItem?
     @Namespace private var contentFocus
     @FocusState private var heroPlayFocused: Bool
+    /// Le focus initial ne se réclame qu'**une fois**. L'accueil se recharge à
+    /// chaque « vu », chaque favori, chaque retour de lecture et chaque retour au
+    /// premier plan : le refaire à chaque fois arracherait le focus des mains de
+    /// l'utilisateur pour le ramener sur le billboard.
+    @State private var hasClaimedInitialFocus = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -20,8 +28,13 @@ struct HomeView: View {
 
                 if model.isLoading {
                     LoadingView()
-                } else if let error = model.errorMessage {
-                    EmptyStateView(icon: "exclamationmark.triangle", title: "Rien à afficher", message: error)
+                } else if let failure = model.failure {
+                    EmptyStateView(
+                        icon: failure.icon,
+                        title: failure.title,
+                        message: failure.message,
+                        onRetry: failure.isRetryable ? { session.libraryDidChange() } : nil
+                    )
                 } else {
                     content
                 }
@@ -36,8 +49,12 @@ struct HomeView: View {
         }
         .resumeChoice(for: $resumeCandidate) { playback = $0 }
         // Rechargé aussi après un « vu » ou un favori, et au retour d'une lecture,
-        // pour que les rangées reflètent l'état réel du serveur.
-        .task(id: session.libraryRevision) { await model.load(using: session.api) }
+        // pour que les rangées reflètent l'état réel du serveur. Ces rechargements
+        // sont silencieux : les rangées restent à l'écran et se mettent à jour en
+        // place, au lieu de céder la place à un indicateur de chargement.
+        .task(id: session.libraryRevision) {
+            await model.load(using: session.api, silently: hasClaimedInitialFocus)
+        }
         .onChange(of: playback) { previous, current in
             guard previous != nil, current == nil else { return }
             // Le lecteur signale sa position au serveur en quittant, sans attendre
@@ -53,11 +70,31 @@ struct HomeView: View {
         // dès que le billboard est réellement affiché, faute de quoi tvOS le laisse
         // sur la barre latérale et l'ouvre.
         .onChange(of: model.isLoading) { _, isLoading in
-            if !isLoading { heroPlayFocused = true }
+            guard !isLoading, !hasClaimedInitialFocus, model.failure == nil else { return }
+            hasClaimedInitialFocus = true
+            heroPlayFocused = true
         }
         // Les actions de l'étagère du haut atterrissent ici : c'est l'écran racine
         // de l'onglet initial, donc le seul toujours monté au lancement.
         .task(id: session.pendingDeepLink) { await followDeepLink() }
+        .task(id: spotlightCandidate?.id) { await spotlightDebounce() }
+    }
+
+    /// Le billboard suit le focus, mais avec un temps de retard.
+    ///
+    /// Chaque promotion recharge une image plein cadre de 760 pt et enchaîne un
+    /// fondu : traverser une rangée d'une traite en déclenchait autant qu'il y a de
+    /// vignettes survolées. Un quart de seconde de stabilité suffit à ne retenir
+    /// que la vignette sur laquelle l'utilisateur s'arrête vraiment.
+    private func spotlightDebounce() async {
+        guard let candidate = spotlightCandidate else { return }
+        // La toute première promotion est immédiate : l'écran est encore sur le
+        // titre mis en avant par défaut, attendre y serait perçu comme une latence.
+        if spotlight != nil {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+        }
+        spotlight = candidate
     }
 
     private var content: some View {
@@ -79,7 +116,7 @@ struct HomeView: View {
                         title: section.title,
                         items: section.items,
                         layout: section.layout,
-                        onFocus: { spotlight = $0 },
+                        onFocus: { spotlightCandidate = $0 },
                         onOpenDetails: { navigate(to: $0) },
                         onSelect: { select($0) }
                     )

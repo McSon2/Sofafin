@@ -32,7 +32,11 @@ struct HeroBillboard: View {
                 .padding(.bottom, 60)
         }
         .frame(height: 760)
-        .animation(.easeInOut(duration: 0.4), value: item.id)
+        .decorativeAnimation(.easeInOut(duration: 0.4), value: item.id)
+        // Le bloc de texte réunit déjà titre, métadonnées et synopsis : les faire
+        // énoncer un à un obligerait à traverser cinq éléments avant d'atteindre
+        // le bouton de lecture.
+        .accessibilityElement(children: .contain)
     }
 
     private var content: some View {
@@ -70,6 +74,9 @@ struct HeroBillboard: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: 620, maxHeight: 200, alignment: .leading)
+                        // Le logo *est* le titre : sans libellé, il n'existe pas
+                        // pour un lecteur d'écran.
+                        .accessibilityLabel(item.rowTitle)
                 } else {
                     fallbackTitle
                 }
@@ -94,13 +101,16 @@ struct HeroBillboard: View {
                 onPlay(item)
             } label: {
                 Label(playLabel, systemImage: isCollection ? "rectangle.stack.fill" : "play.fill")
-                    .font(Theme.Font.cardTitle)
+                    .font(Theme.Font.button)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 6)
             }
             .buttonStyle(.glassProminent)
             .prefersDefaultFocus(true, in: namespace)
             .focused($playFocused)
+            // Le libellé du bouton ne dit pas de quel titre il s'agit : à
+            // l'aveugle, « Reprendre » seul n'apprend rien.
+            .accessibilityLabel("\(playLabel), \(item.rowTitle)")
 
             // Une collection n'ouvre que sur sa fiche : deux boutons y mèneraient
             // au même endroit.
@@ -109,11 +119,12 @@ struct HeroBillboard: View {
                     onDetails(item)
                 } label: {
                     Label("Plus d'infos", systemImage: "info.circle")
-                        .font(Theme.Font.cardTitle)
+                        .font(Theme.Font.button)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.glass)
+                .accessibilityLabel("Plus d'infos sur \(item.rowTitle)")
             }
         }
         .padding(.top, 10)

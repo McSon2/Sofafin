@@ -13,21 +13,80 @@ struct HomeSection: Identifiable {
 @Observable
 @MainActor
 final class HomeModel {
+    /// Pourquoi l'accueil est vide — la nuance change ce qu'on propose à
+    /// l'utilisateur : une médiathèque réellement déserte n'appelle aucune action,
+    /// un serveur muet appelle un bouton pour réessayer.
+    enum Failure: Equatable {
+        case unreachable(String)
+        case empty
+
+        var title: String {
+            switch self {
+            case .unreachable: return "Serveur injoignable"
+            case .empty: return "Médiathèque vide"
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .unreachable(let detail): return detail
+            case .empty: return "Aucun film ni série n'a été trouvé sur ce serveur."
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .unreachable: return "wifi.exclamationmark"
+            case .empty: return "tray"
+            }
+        }
+
+        /// Réessayer une médiathèque vide ne servirait à rien : c'est côté serveur
+        /// qu'il faut agir.
+        var isRetryable: Bool { self != .empty }
+    }
+
     private(set) var sections: [HomeSection] = []
     private(set) var featured: [MediaItem] = []
     private(set) var isLoading = true
-    private(set) var errorMessage: String?
+    private(set) var failure: Failure?
 
     /// Genres mis en avant : on ne montre que ceux qui ont assez de titres
     /// pour remplir une rangée, sinon l'accueil se retrouve criblé de trous.
     private let minimumItemsPerGenreRow = 5
     private let maximumGenreRows = 3
 
-    func load(using client: JellyfinClient) async {
-        isLoading = true
-        errorMessage = nil
+    /// Recharge l'accueil.
+    ///
+    /// `silently` distingue les deux cas qui menaient jusqu'ici au même écran de
+    /// chargement. Une ouverture d'écran mérite son indicateur ; un rafraîchissement
+    /// déclenché par un « vu », un favori ou un retour de lecture ne doit **rien**
+    /// démonter : vider les rangées le temps d'un aller-retour au serveur ferait
+    /// clignoter tout l'écran et, surtout, détruirait la position du focus.
+    func load(using client: JellyfinClient, silently: Bool = false) async {
+        isLoading = !silently && sections.isEmpty
+        if !silently { failure = nil }
 
-        async let resume = (try? await client.resumeItems(limit: 12)) ?? []
+        // La première requête sert de sonde : elle seule remonte son erreur, les
+        // autres restant optionnelles. Sans cela une panne réseau se présentait
+        // comme une médiathèque vide, message trompeur et sans issue.
+        let resumeItems: [MediaItem]
+        do {
+            resumeItems = try await client.resumeItems(limit: 12)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard !Task.isCancelled else { return }
+            isLoading = false
+            // Un rafraîchissement silencieux qui échoue laisse l'écran tel quel :
+            // remplacer des rangées valides par une erreur serait une régression
+            // pour l'utilisateur, qui n'a rien demandé.
+            if !silently || sections.isEmpty {
+                failure = .unreachable(error.localizedDescription)
+            }
+            return
+        }
+
         async let nextUp = (try? await client.nextUp(limit: 16)) ?? []
         async let latest = (try? await client.latestItems(limit: 24)) ?? []
         async let movies = (try? await client.items(
@@ -41,8 +100,8 @@ final class HomeModel {
         ).items) ?? []
         async let collections = (try? await client.collections(limit: 24)) ?? []
 
-        let (resumeItems, nextUpItems, latestItems, movieItems, seriesItems, favoriteItems, collectionItems) =
-            await (resume, nextUp, latest, movies, series, favorites, collections)
+        let (nextUpItems, latestItems, movieItems, seriesItems, favoriteItems, collectionItems) =
+            await (nextUp, latest, movies, series, favorites, collections)
 
         var built: [HomeSection] = []
         append(&built, id: "resume", "Reprendre la lecture", .landscape, resumeItems)
@@ -58,15 +117,19 @@ final class HomeModel {
         // une médiathèque déserte.
         guard !Task.isCancelled else { return }
 
-        sections = built
+        // Les rangées thématiques sont reportées telles quelles : elles arrivent
+        // après coup, et les laisser disparaître le temps d'un rafraîchissement
+        // ferait sauter la mise en page sous le focus de l'utilisateur.
+        sections = built + genreSections
         // Le billboard puise dans les nouveautés : ce sont elles qui donnent envie.
         featured = Array((latestItems.isEmpty ? movieItems : latestItems).prefix(8))
         isLoading = false
+        failure = built.isEmpty ? .empty : nil
 
-        if built.isEmpty {
-            errorMessage = "Aucun contenu trouvé sur ce serveur."
-        }
-
+        // Leur composition est tirée au sort à chaque appel : la recalculer sur un
+        // simple « marquer comme vu » redistribuerait les vignettes sous les yeux
+        // de l'utilisateur. On ne les construit donc qu'une fois.
+        guard genreSections.isEmpty, !built.isEmpty else { return }
         await appendGenreRows(using: client, seed: movieItems + seriesItems)
     }
 
@@ -80,6 +143,9 @@ final class HomeModel {
         guard !items.isEmpty else { return }
         sections.append(HomeSection(id: id, title: title, layout: layout, items: items))
     }
+
+    /// Rangées thématiques déjà construites, conservées d'un rechargement à l'autre.
+    private var genreSections: [HomeSection] = []
 
     /// Rangées thématiques construites après coup : l'accueil s'affiche d'abord,
     /// ces requêtes supplémentaires viennent l'enrichir sans le retarder.
@@ -99,8 +165,11 @@ final class HomeModel {
                 genres: [genre],
                 limit: 20
             ).items, items.count >= minimumItemsPerGenreRow else { continue }
+            guard !Task.isCancelled else { return }
 
-            sections.append(HomeSection(id: "genre-\(genre)", title: genre, layout: .poster, items: items))
+            let section = HomeSection(id: "genre-\(genre)", title: genre, layout: .poster, items: items)
+            genreSections.append(section)
+            sections.append(section)
         }
     }
 }

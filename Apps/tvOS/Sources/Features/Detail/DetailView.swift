@@ -20,6 +20,10 @@ struct DetailView: View {
     @State private var pushedPerson: Person?
     @State private var isFavorite = false
     @State private var isPlayed = false
+    /// Portée de focus de la fiche : elle désigne le bouton de lecture comme cible
+    /// à l'ouverture. Sans elle, le moteur choisit seul et tombe régulièrement sur
+    /// une vignette de la distribution, en bas de l'écran.
+    @Namespace private var headerFocus
 
     /// Sujet réellement affiché. Un épisode n'a pas de fiche à lui : on présente
     /// sa série, saison ouverte sur la sienne, pour que l'utilisateur ait sous les
@@ -66,6 +70,7 @@ struct DetailView: View {
                 .padding(.bottom, 90)
             }
             .scrollClipDisabled()
+            .focusScope(headerFocus)
         }
         .ignoresSafeArea()
         .navigationDestination(item: $pushedItem) { next in
@@ -79,6 +84,10 @@ struct DetailView: View {
         }
         .resumeChoice(for: $resumeCandidate) { playback = $0 }
         .task { await load() }
+        // Marquer un épisode comme vu depuis le menu d'une vignette change l'état
+        // côté serveur, mais la fiche était le seul écran à ne pas s'y abonner :
+        // son coin « non vu » restait donc affiché jusqu'à ce qu'on la rouvre.
+        .task(id: session.libraryRevision) { await refreshUserState() }
     }
 
     // MARK: Visuel
@@ -119,9 +128,13 @@ struct DetailView: View {
             }
 
             if let overview = current.overview, !overview.isEmpty {
+                // Borné à cinq lignes : un synopsis de quinze lignes repousse les
+                // saisons, les épisodes et la distribution hors de l'écran, et la
+                // télévision n'est pas un support de lecture longue.
                 Text(overview)
                     .font(Theme.Font.body)
                     .foregroundStyle(Theme.Palette.secondaryText)
+                    .lineLimit(5)
                     .frame(maxWidth: 1000, alignment: .leading)
             }
 
@@ -138,11 +151,16 @@ struct DetailView: View {
                     startPlayback(entryPoint)
                 } label: {
                     Label(playLabel(for: entryPoint), systemImage: "play.fill")
-                        .font(Theme.Font.cardTitle)
+                        .font(Theme.Font.button)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.glassProminent)
+                // Cible de focus à l'ouverture de la fiche : c'est le geste
+                // attendu neuf fois sur dix, et le laisser au moteur ferait
+                // atterrir le focus sur la première vignette de la distribution.
+                .prefersDefaultFocus(true, in: headerFocus)
+                .accessibilityHint(playbackHint(for: entryPoint))
             }
 
             // Une bande-annonce se regarde d'un bout à l'autre : on la lance
@@ -152,34 +170,51 @@ struct DetailView: View {
                     playback = PlaybackRequest(trailer, startTime: 0)
                 } label: {
                     Label("Bande-annonce", systemImage: "film")
-                        .font(Theme.Font.cardTitle)
+                        .font(Theme.Font.button)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.glass)
             }
 
+            // Ces deux boutons n'ont que leur glyphe : sans libellé explicite,
+            // VoiceOver n'annonce rien d'autre que « bouton ». Le libellé dit
+            // l'action, la valeur dit l'état courant.
             Button {
                 Task { await toggleFavorite() }
             } label: {
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
-                    .font(Theme.Font.cardTitle)
+                    .font(Theme.Font.button)
                     .padding(.vertical, 6)
                     .frame(width: 70)
             }
             .buttonStyle(.glass)
+            .accessibilityLabel(isFavorite ? "Retirer des favoris" : "Ajouter aux favoris")
+            .accessibilityValue(isFavorite ? "Favori" : "Pas en favori")
 
             Button {
                 Task { await togglePlayed() }
             } label: {
                 Image(systemName: isPlayed ? "checkmark.circle.fill" : "checkmark.circle")
-                    .font(Theme.Font.cardTitle)
+                    .font(Theme.Font.button)
                     .padding(.vertical, 6)
                     .frame(width: 70)
             }
             .buttonStyle(.glass)
+            .accessibilityLabel(isPlayed ? "Marquer comme non vu" : "Marquer comme vu")
+            .accessibilityValue(isPlayed ? "Vu" : "Non vu")
         }
         .padding(.top, 12)
+    }
+
+    /// Ce que lance réellement le bouton — jamais évident sur une série, où il
+    /// reprend un épisode précis que rien à l'écran ne nomme.
+    private func playbackHint(for entryPoint: MediaItem) -> String {
+        guard current.type != .movie else { return "" }
+        if let code = entryPoint.episodeCode, let name = entryPoint.name {
+            return "Lance \(code), \(name)"
+        }
+        return "Lance \(entryPoint.displayTitle)"
     }
 
     private func playLabel(for entryPoint: MediaItem) -> String {
@@ -309,6 +344,14 @@ struct DetailView: View {
                                 .frame(width: 180)
                             }
                             .buttonStyle(MediaCardButtonStyle())
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(
+                                [person.name, person.role]
+                                    .compactMap(\.self)
+                                    .filter { !$0.isEmpty }
+                                    .joined(separator: ", rôle : ")
+                            )
+                            .accessibilityHint("Affiche les titres avec cette personne")
                         }
                     }
                     .padding(.horizontal, Theme.Metrics.screenPadding)
@@ -354,6 +397,36 @@ struct DetailView: View {
         // Une collection n'a pas de bande-annonce à elle : c'est un contenant.
         if (full ?? item).type != .boxSet {
             trailer = await session.api.localTrailers(itemId: subject).first
+        }
+    }
+
+    /// Recharge ce qui porte un état modifiable — vu, favori, progression — et
+    /// **rien d'autre**.
+    ///
+    /// Volontairement plus étroit que `load()` : rejouer celui-ci relancerait
+    /// `loadSeasons`, qui choisit la saison à ouvrir et ramènerait l'utilisateur
+    /// sur celle de départ alors qu'il en parcourait une autre. Les saisons, les
+    /// titres similaires et la bande-annonce ne bougent jamais du fait d'un
+    /// « marquer comme vu » : les recharger ne ferait que faire clignoter l'écran.
+    private func refreshUserState() async {
+        // Au premier montage, `load()` s'en charge déjà : ce point d'entrée ne sert
+        // qu'aux révisions suivantes.
+        guard detail != nil else { return }
+
+        if let full = try? await session.api.item(id: subjectId) {
+            detail = full
+            isFavorite = full.isFavorite
+            isPlayed = full.isPlayed
+        }
+
+        switch current.type {
+        case .series:
+            // La saison affichée, pas celle d'origine.
+            if let season = selectedSeason { await loadEpisodes(for: season) }
+        case .boxSet:
+            collectionItems = (try? await session.api.collectionItems(collectionId: subjectId)) ?? []
+        default:
+            break
         }
     }
 

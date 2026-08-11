@@ -18,7 +18,7 @@ struct RootView: View {
                 MainTabView()
             }
         }
-        .animation(.easeInOut(duration: 0.35), value: session.phase)
+        .decorativeAnimation(.easeInOut(duration: 0.35), value: session.phase)
     }
 }
 
@@ -35,11 +35,40 @@ struct MainTabView: View {
     @State private var searchPath = NavigationPath()
     @State private var libraryPaths: [String: NavigationPath] = [:]
 
+    /// Onglet quitté la dernière fois. Retrouver l'application là où on l'a
+    /// laissée est une attente de base sur un téléviseur : on y revient souvent
+    /// pour poursuivre exactement ce qu'on faisait.
+    @AppStorage("lastSelectedTab") private var storedTab: String = AppTab.home.storageKey
+
     enum AppTab: Hashable {
         case home
         case library(String)
         case search
         case settings
+
+        var storageKey: String {
+            switch self {
+            case .home: return "home"
+            case .search: return "search"
+            case .settings: return "settings"
+            case .library(let id): return "library:\(id)"
+            }
+        }
+
+        /// `nil` quand la clé ne correspond à rien de connu — une bibliothèque
+        /// retirée du serveur depuis la dernière session, par exemple.
+        static func from(storageKey: String, libraries: [MediaItem]) -> AppTab? {
+            switch storageKey {
+            case "home": return .home
+            case "search": return .search
+            case "settings": return .settings
+            default:
+                guard let id = storageKey.split(separator: ":", maxSplits: 1).last.map(String.init),
+                      libraries.contains(where: { $0.id == id })
+                else { return nil }
+                return .library(id)
+            }
+        }
     }
 
     var body: some View {
@@ -64,6 +93,14 @@ struct MainTabView: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .background(Theme.Palette.background)
+        // Les bibliothèques sont déjà chargées quand cette vue apparaît : la clé
+        // enregistrée peut donc être confrontée à ce que le serveur propose
+        // réellement, et retomber sur l'accueil si l'onglet a disparu.
+        .onAppear {
+            if let restored = AppTab.from(storageKey: storedTab, libraries: session.libraries) {
+                selection = restored
+            }
+        }
     }
 
     /// Choisir un onglet dans la barre le ramène à sa racine — y compris l'onglet
@@ -74,6 +111,7 @@ struct MainTabView: View {
         } set: { destination in
             popToRoot(destination)
             selection = destination
+            storedTab = destination.storageKey
         }
     }
 
