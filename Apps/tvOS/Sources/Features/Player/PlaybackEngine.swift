@@ -68,10 +68,10 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     /// serveur pour leurs vignettes.
     private(set) var client: JellyfinClient?
 
-    /// Retenu pour toute la durée de vie du moteur : `AVAssetResourceLoader` ne
-    /// garde qu'une référence faible sur son délégué, et un manifeste qui ne
-    /// répond plus fige la lecture sans rien dire.
-    private let manifestRewriter = PlaybackManifestRewriter()
+    /// Retenu pour toute la durée de vie du moteur : le lecteur recharge la
+    /// playlist en cours de route, et un serveur fermé entre-temps
+    /// interromprait la lecture.
+    private let manifestServer = PlaybackManifestServer()
 
     private var ticker: Any?
     private var statusObserver: NSKeyValueObservation?
@@ -222,13 +222,13 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
 
         // Le manifeste d'un film HDR propose trois variantes de même débit, dont
         // deux replis que le serveur ne peut produire qu'en réencodant l'image.
-        // `PlaybackManifestRewriter` ne lui en laisse qu'une : celle qui se
+        // `PlaybackManifestServer` n'en laisse qu'une au lecteur : celle qui se
         // recopie. Exprimer une préférence ne suffisait pas — un film HDR10+ fait
         // déclarer sa bonne variante inéligible, et le lecteur se rabat.
-        let asset = plan.url.pathExtension == "m3u8"
-            ? manifestRewriter.asset(for: plan.url)
-            : AVURLAsset(url: plan.url)
-        let playerItem = AVPlayerItem(asset: asset)
+        let url = plan.url.pathExtension == "m3u8"
+            ? await manifestServer.localURL(for: plan.url)
+            : plan.url
+        let playerItem = AVPlayerItem(asset: AVURLAsset(url: url))
         playerItem.externalMetadata = Self.metadata(for: full)
         // Pas de `navigationMarkerGroups` : voir `PlaybackEngine+Decorations`.
 
