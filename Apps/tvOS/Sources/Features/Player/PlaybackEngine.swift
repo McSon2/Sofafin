@@ -44,6 +44,15 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     private(set) var phase: Phase = .loading
     private(set) var context: PlaybackContext?
 
+    /// Bascule sur l'écran d'échec, sans jamais écraser une cause déjà établie :
+    /// c'est le premier échec qui explique, les suivants n'en sont que la suite.
+    func markFailed(_ message: String) {
+        guard case .failed = phase else {
+            phase = .failed(message)
+            return
+        }
+    }
+
     let player = AVPlayer()
 
     /// Demande la fermeture de l'écran de lecture.
@@ -62,6 +71,16 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     private var ticker: Any?
     private var statusObserver: NSKeyValueObservation?
     private var endObserver: NSObjectProtocol?
+    /// Dernier état de transport connu. Pause et reprise sont les instants où le
+    /// panneau système doit être réaligné : entre les deux, il extrapole seul
+    /// depuis la vitesse annoncée.
+    private var lastTimeControlStatus: AVPlayer.TimeControlStatus = .paused
+
+    // Diagnostic — voir `PlaybackEngine+Diagnostics`.
+    var failureObserver: NSKeyValueObservation?
+    var errorLogObserver: NSObjectProtocol?
+    var stallObserver: NSObjectProtocol?
+    var startWatchdog: Task<Void, Never>?
 
     private var tickCount = 0
     private var lastPosition: Double = 0
@@ -77,6 +96,9 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
 
     func configure(client: JellyfinClient) {
         self.client = client
+        // Déclare l'usage de la session audio — lecture d'un film — sans l'activer :
+        // c'est AVKit qui s'en charge au démarrage du flux.
+        Self.configureAudioSession()
     }
 
     /// Première lecture de la session.
@@ -104,6 +126,10 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         reportStop(position: position ?? currentPosition)
         player.pause()
         player.replaceCurrentItem(with: nil)
+        // Les gestionnaires de commande retiennent le moteur : les laisser en place
+        // ferait agir la télécommande sur un lecteur déjà fermé.
+        unregisterRemoteCommands()
+        clearNowPlaying()
     }
 
     /// Termine comme si le média était allé à son terme, puis ferme l'écran.
@@ -171,8 +197,12 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
             return
         }
 
-        jellyfinLog.debug(
-            "LECTURE · \(plan.method.rawValue, privacy: .public) · départ \(resume.timecode, privacy: .public) · \(segments.count) segments · \(full.chapters?.count ?? 0) chapitres · suite : \(next?.displayTitle ?? "aucune", privacy: .public)"
+        logPlaybackStart(
+            plan,
+            resume: resume,
+            segments: segments.count,
+            chapters: full.chapters?.count ?? 0,
+            next: next?.displayTitle
         )
 
         let newContext = PlaybackContext(plan: plan, segments: segments, nextEpisode: next, siblings: siblings)
@@ -181,18 +211,27 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
 
         let playerItem = AVPlayerItem(asset: AVURLAsset(url: plan.url))
         playerItem.externalMetadata = Self.metadata(for: full)
-        playerItem.navigationMarkerGroups = Self.markerGroups(for: newContext)
+        // Pas de `navigationMarkerGroups` : voir `PlaybackEngine+Decorations`.
 
         player.replaceCurrentItem(with: playerItem)
         player.appliesMediaSelectionCriteriaAutomatically = true
 
         seek(playerItem, to: plan.startTime)
         attachObservers(to: playerItem)
+        attachDiagnostics(to: playerItem)
         player.play()
         phase = .playing
+        // Un démarrage qui n'arrive jamais est le cas le plus déroutant : aucune
+        // erreur n'est signalée, l'écran tourne indéfiniment.
+        watchForStalledStart()
 
         applyDecorations()
         reportStart(plan)
+
+        // Ce que le système montre de la lecture hors de l'application. Posé après
+        // `player.play()` : la vitesse annoncée au panneau doit être la vraie.
+        publishNowPlaying(for: newContext)
+        registerRemoteCommands()
 
         // La vignette de l'épisode suivant se télécharge : poser la proposition
         // après coup évite de retarder le démarrage de l'image.
@@ -227,7 +266,11 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         }
         statusObserver = playerItem.observe(\.status, options: [.new]) { [weak self] item, _ in
             guard item.status == .readyToPlay else { return }
-            MainActor.assumeIsolated {
+            // `Task { @MainActor }` et non `assumeIsolated` : KVO délivre sur la
+            // file qui a modifié la propriété, et AVFoundation ne promet pas que
+            // ce soit la principale. L'affirmer y ferait tomber le processus sans
+            // exception ni trace — le même piège qui a coûté le panneau système.
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
                 // Une seule fois : les repositionnements suivants viennent de l'utilisateur.
@@ -255,8 +298,27 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         ) { [weak self] time in
             MainActor.assumeIsolated {
                 guard let self, time.seconds.isFinite else { return }
+                // Un écart supérieur au pas du battement trahit un déplacement
+                // dans la timeline : l'extrapolation du panneau système est alors
+                // fausse, et lui seul peut nous le dire — AVKit ne notifie pas les
+                // repositionnements venus de ses propres contrôles.
+                if abs(time.seconds - self.lastPosition) > 1.5 {
+                    self.refreshNowPlayingPosition()
+                }
                 self.lastPosition = time.seconds
                 self.refreshSkipAction(at: time.seconds)
+
+                // Pause et reprise sont relevées ici plutôt que par une
+                // observation de `timeControlStatus` : KVO délivre ses
+                // notifications sur la file qui a modifié la propriété — une file
+                // interne d'AVFoundation — où `MainActor.assumeIsolated` piège
+                // fatalement. Ce battement-ci est explicitement sur `.main`.
+                if self.lastTimeControlStatus != self.player.timeControlStatus {
+                    self.lastTimeControlStatus = self.player.timeControlStatus
+                    self.refreshNowPlayingPosition()
+                    // La première image est arrivée : plus rien à surveiller.
+                    if self.player.timeControlStatus == .playing { self.cancelStartWatchdog() }
+                }
 
                 self.tickCount += 1
                 if self.tickCount % 20 == 0 { self.reportProgress(position: time.seconds) }
@@ -280,7 +342,10 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = nil
         statusObserver = nil
+        lastTimeControlStatus = .paused
         tickCount = 0
+        detachDiagnostics()
+        cancelStartWatchdog()
     }
 
     /// Fin du média. Quand une proposition d'épisode suivant est en place, AVKit

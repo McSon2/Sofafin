@@ -17,25 +17,34 @@ struct EpisodesPanel: View {
     let client: JellyfinClient
     let onSelect: (MediaItem) -> Void
 
+    @State private var position = ScrollPosition()
+
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: 28) {
-                    ForEach(episodes) { episode in
-                        Button { onSelect(episode) } label: {
-                            card(for: episode)
-                        }
-                        .buttonStyle(MediaCardButtonStyle())
-                        .id(episode.id)
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: 28) {
+                ForEach(episodes) { episode in
+                    Button { onSelect(episode) } label: {
+                        card(for: episode)
                     }
+                    .buttonStyle(MediaCardButtonStyle())
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(episode.accessibilityDescription)
+                    .accessibilityValue(episode.id == currentId ? "En cours de lecture" : "")
+                    .accessibilityHint("Bascule la lecture sur cet épisode")
                 }
-                .padding(.horizontal, 60)
-                .padding(.vertical, 24)
             }
-            .scrollClipDisabled()
-            // Ouvrir la liste sur l'épisode regardé : sans cela une saison de
-            // vingt épisodes commence toujours au premier.
-            .onAppear { proxy.scrollTo(currentId, anchor: .leading) }
+            .scrollTargetLayout()
+            .padding(.horizontal, 60)
+            .padding(.vertical, 24)
+        }
+        .scrollClipDisabled()
+        .scrollPosition($position)
+        // Ouvrir la liste sur l'épisode regardé : sans cela une saison de
+        // vingt épisodes commence toujours au premier. `initial: true` remplace
+        // l'ancien `onAppear`, et suit en plus les changements d'épisode quand la
+        // lecture enchaîne sans que le panneau soit démonté.
+        .onChange(of: currentId, initial: true) { _, id in
+            position.scrollTo(id: id, anchor: .leading)
         }
     }
 
@@ -79,25 +88,7 @@ struct CastPanel: View {
         ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: 32) {
                 ForEach(cast.prefix(20), id: \.id) { person in
-                    VStack(spacing: 12) {
-                        RemoteImage(url: client.personImageURL(for: person))
-                            .frame(width: 150, height: 150)
-                            .clipShape(Circle())
-
-                        Text(person.name ?? "")
-                            .font(Theme.Font.badge)
-                            .foregroundStyle(Theme.Palette.primaryText)
-                            .lineLimit(1)
-
-                        if let role = person.role, !role.isEmpty {
-                            Text(role)
-                                .font(Theme.Font.badge)
-                                .foregroundStyle(Theme.Palette.tertiaryText)
-                                .lineLimit(1)
-                        }
-                    }
-                    .frame(width: 190)
-                    .focusable()
+                    CastPortrait(person: person, client: client)
                 }
             }
             .padding(.horizontal, 60)
@@ -107,63 +98,48 @@ struct CastPanel: View {
     }
 }
 
-// MARK: - À propos
+/// Un portrait de la rangée.
+///
+/// Il porte son propre `FocusState` : `focusable()` seul déplace bien le focus,
+/// mais **sans rien changer à l'écran**. La rangée devenait alors un espace où
+/// l'on navigue à l'aveugle — la faute la plus grave qu'une interface de
+/// télévision puisse commettre, l'état de focus étant le seul repère disponible.
+private struct CastPortrait: View {
+    let person: Person
+    let client: JellyfinClient
 
-/// Le synopsis, et ce que le serveur a réellement décidé d'envoyer — utile quand
-/// une lecture chauffe le processeur sans raison apparente.
-struct AboutPanel: View {
-    let context: PlaybackContext
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 22) {
-                if let overview = context.item.overview, !overview.isEmpty {
-                    Text(overview)
-                        .font(Theme.Font.body)
-                        .foregroundStyle(Theme.Palette.secondaryText)
-                }
+        VStack(spacing: 12) {
+            RemoteImage(url: client.personImageURL(for: person))
+                .frame(width: 150, height: 150)
+                .clipShape(Circle())
 
-                if let genres = context.item.genres, !genres.isEmpty {
-                    Text(genres.prefix(5).joined(separator: " · "))
-                        .font(Theme.Font.caption)
-                        .foregroundStyle(Theme.Palette.tertiaryText)
-                }
+            Text(person.name ?? "")
+                .font(Theme.Font.badge)
+                .foregroundStyle(Theme.Palette.primaryText)
+                .lineLimit(1)
 
-                HStack(spacing: 14) {
-                    ForEach(technicalTags, id: \.self) { tag in
-                        Text(tag)
-                            .font(Theme.Font.badge)
-                            .foregroundStyle(Theme.Palette.secondaryText)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 7)
-                            .liquidGlass(cornerRadius: 10)
-                    }
-                }
+            if let role = person.role, !role.isEmpty {
+                Text(role)
+                    .font(Theme.Font.badge)
+                    .foregroundStyle(Theme.Palette.tertiaryText)
+                    .lineLimit(1)
             }
-            .frame(maxWidth: 1200, alignment: .leading)
-            .padding(.horizontal, 60)
-            .padding(.vertical, 24)
         }
-        .scrollClipDisabled()
+        .frame(width: 190)
+        .brightness(isFocused ? 0.06 : 0)
+        .focusLift(isFocused)
         .focusable()
-    }
-
-    /// Ce qui décrit la livraison du flux, dans l'ordre où on se pose la question :
-    /// comment, en quoi, à quelle définition.
-    private var technicalTags: [String] {
-        var tags = [context.plan.method.label]
-
-        if let video = context.plan.mediaSource.mediaStreams?.first(where: \.isVideo) {
-            if let codec = video.codec { tags.append(codec.uppercased()) }
-            if let height = video.height { tags.append("\(height)p") }
-            if let range = video.videoRangeType, range != "SDR" { tags.append(range) }
-        }
-        if let audio = context.plan.mediaSource.mediaStreams?.first(where: \.isAudio),
-           let codec = audio.codec {
-            tags.append(audio.channels == 6 ? "\(codec.uppercased()) 5.1" : codec.uppercased())
-        }
-        if let runtime = context.item.runtimeLabel { tags.append(runtime) }
-        return tags
+        .focused($isFocused)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            [person.name, person.role]
+                .compactMap(\.self)
+                .filter { !$0.isEmpty }
+                .joined(separator: ", rôle : ")
+        )
     }
 }
 
@@ -200,7 +176,7 @@ struct PlaybackBadge: View {
         .padding(.top, 60)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .opacity(isVisible ? 1 : 0)
-        .animation(.easeInOut(duration: 0.6), value: isVisible)
+        .decorativeAnimation(.easeInOut(duration: 0.6), value: isVisible)
         .task {
             try? await Task.sleep(for: .seconds(5))
             isVisible = false

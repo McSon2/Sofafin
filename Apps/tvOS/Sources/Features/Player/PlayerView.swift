@@ -45,11 +45,22 @@ struct PlayerView: View {
             }
         }
         .task {
+            // Les affiches et le flux vidéo sortent du même serveur : tant que la
+            // lecture dure, la bande passante lui revient entièrement.
+            ImagePrefetcher.shared.setSuspended(true)
             engine.configure(client: session.api)
             engine.onDismiss = { dismiss() }
             await engine.start(item, startTime: startTime)
         }
+        // Filet de sécurité sur le bouton Menu, dont les directives font la seule
+        // sortie possible de n'importe quel écran. Un `AVPlayerViewController`
+        // présenté par le système se ferme tout seul ; celui-ci est **embarqué**
+        // dans un `fullScreenCover`, et rien ne garantit qu'il consomme
+        // l'événement — auquel cas l'écran de lecture n'aurait aucune issue.
+        // Si AVKit le traite déjà, ce gestionnaire n'est jamais appelé.
+        .onExitCommand { dismiss() }
         .onDisappear {
+            ImagePrefetcher.shared.setSuspended(false)
             // Rafraîchir seulement après que le serveur a enregistré la position :
             // « Reprendre la lecture » afficherait sinon l'état d'avant la séance.
             Task {

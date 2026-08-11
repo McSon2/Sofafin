@@ -65,39 +65,19 @@ extension PlaybackEngine {
     }
 
     // MARK: - Marqueurs de la timeline
-
-    /// Chapitres du conteneur, à défaut les repères détectés.
-    ///
-    /// Une durée nulle est volontaire : AVKit étend alors chaque marqueur jusqu'au
-    /// suivant, ce qui évite d'avoir à connaître la durée du média — inconnue tant
-    /// que l'élément n'est pas prêt.
-    static func markerGroups(for context: PlaybackContext) -> [AVNavigationMarkersGroup] {
-        let chapters = context.chapters
-        if chapters.count > 1 {
-            let markers = chapters.enumerated().map { index, chapter in
-                AVTimedMetadataGroup(
-                    items: [titleMetadata(chapter.name ?? "Chapitre \(index + 1)")],
-                    timeRange: CMTimeRange(
-                        start: CMTime(seconds: chapter.start, preferredTimescale: 600),
-                        duration: .zero
-                    )
-                )
-            }
-            return [AVNavigationMarkersGroup(title: "Chapitres", timedNavigationMarkers: markers)]
-        }
-
-        guard !context.segments.isEmpty else { return [] }
-        let markers = context.segments.map { segment in
-            AVTimedMetadataGroup(
-                items: [titleMetadata(segment.kind.markerLabel)],
-                timeRange: CMTimeRange(
-                    start: CMTime(seconds: segment.start, preferredTimescale: 600),
-                    duration: .zero
-                )
-            )
-        }
-        return [AVNavigationMarkersGroup(title: "Repères", timedNavigationMarkers: markers)]
-    }
+    //
+    // **`navigationMarkerGroups` est volontairement absent.** Il paraissait être le
+    // moyen officiel de poser les chapitres sur la timeline, mais AVKit en tire un
+    // second bouton dans la barre de transport, à l'icône de liste — la même que
+    // celle du menu « Chapitres » ci-dessous. Ce bouton ouvre un panneau de
+    // vignettes qu'AVKit fabrique en allant échantillonner le média : sur un flux
+    // HLS transcodé à la demande, sans piste de défilement rapide, il n'y parvient
+    // pas et affiche **une carte grise vide**. Deux icônes identiques, dont une
+    // inerte.
+    //
+    // Les chapitres restent atteignables par le menu textuel, qui n'a besoin de
+    // rien échantillonner, et les segments par le bouton « Passer l'intro »
+    // (`contextualActions`) — lequel ne dépend pas de ces marqueurs.
 
     /// Alimente le panneau d'information de la télécommande Siri.
     static func metadata(for item: MediaItem) -> [AVMetadataItem] {
@@ -142,8 +122,14 @@ extension PlaybackEngine {
     ///
     /// `contentTimeForTransition` la fait apparaître au début du générique quand
     /// le serveur l'a repéré ; à défaut, `indefinite` la reporte à la toute fin du
-    /// média. Le compte à rebours d'acceptation automatique ne démarre, lui, qu'une
-    /// fois la lecture terminée.
+    /// média.
+    ///
+    /// `automaticAcceptanceInterval` ne se décompte qu'**à partir de la fin du
+    /// média** : sur un générique long, il s'ajoute à la durée de celui-ci au lieu
+    /// de la borner. Le délai réellement appliqué est celui que la carte pose
+    /// elle-même à son apparition — voir `NextEpisodeProposalViewController` — et
+    /// la valeur ci-dessous s'y aligne pour que les deux mécanismes ne puissent
+    /// pas se contredire.
     func attachProposal(
         for next: MediaItem,
         image: UIImage?,
@@ -162,7 +148,7 @@ extension PlaybackEngine {
             title: next.displayTitle,
             previewImage: image
         )
-        proposal.automaticAcceptanceInterval = 10
+        proposal.automaticAcceptanceInterval = NextEpisodeProposalViewController.acceptanceDelay
         proposal.metadata = Self.metadata(for: next)
         playerItem.nextContentProposal = proposal
     }
@@ -256,7 +242,10 @@ extension PlaybackEngine {
             ))
         }
 
-        panels.append(panel(titled: "À propos", height: 380, content: AboutPanel(context: context)))
+        // Pas de panneau « À propos » : AVKit ouvre déjà le sien en premier onglet,
+        // bâti sur `externalMetadata` — titre et synopsis, exactement ce qu'il
+        // contenait. Deux onglets pour la même chose n'apprenaient rien et
+        // allongeaient la rangée à parcourir.
         return panels
     }
 
@@ -300,20 +289,5 @@ extension PlaybackEngine {
     /// Refuser la suite, c'est arrêter de regarder.
     func playerViewController(_ controller: AVPlayerViewController, didReject proposal: AVContentProposal) {
         finishAndClose()
-    }
-}
-
-private extension MediaSegmentKind {
-    /// Ce qu'affiche la timeline. Plus court que le libellé du bouton, qui est
-    /// une phrase d'action.
-    var markerLabel: String {
-        switch self {
-        case .intro: return "Générique de début"
-        case .outro: return "Générique de fin"
-        case .recap: return "Résumé"
-        case .preview: return "Bande-annonce"
-        case .commercial: return "Publicité"
-        case .unknown: return "Repère"
-        }
     }
 }
