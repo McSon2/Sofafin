@@ -103,6 +103,13 @@ extension PlaybackEngine {
         jellyfinLog.debug("LECTURE · flux : \(plan.url.absoluteString, privacy: .public)")
     }
 
+    /// L'adresse réellement confiée au lecteur, qui n'est pas toujours celle du
+    /// serveur : sans elle, un échec d'ouverture ne dit pas si la playlist
+    /// réécrite a été servie ou si le lecteur a reçu celle d'origine.
+    func logPlayerURL(_ url: URL) {
+        jellyfinLog.debug("LECTURE · adresse confiée au lecteur : \(url.absoluteString, privacy: .public)")
+    }
+
     /// Quelle variante du manifeste le lecteur a réellement retenue.
     ///
     /// Toute la différence entre une lecture instantanée et une lecture qui bégaie

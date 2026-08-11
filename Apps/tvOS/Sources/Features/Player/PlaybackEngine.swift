@@ -228,6 +228,7 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         let url = plan.url.pathExtension == "m3u8"
             ? await manifestServer.localURL(for: plan.url)
             : plan.url
+        logPlayerURL(url)
         let playerItem = AVPlayerItem(asset: AVURLAsset(url: url))
         playerItem.externalMetadata = Self.metadata(for: full)
         // Pas de `navigationMarkerGroups` : voir `PlaybackEngine+Decorations`.

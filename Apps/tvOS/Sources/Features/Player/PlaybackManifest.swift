@@ -51,7 +51,24 @@ final class PlaybackManifestServer: @unchecked Sendable {
                 documents[path] = Data(rewritten.utf8)
                 return path
             }
-            return URL(string: "http://127.0.0.1:\(port)\(path)") ?? master
+            guard let local = URL(string: "http://127.0.0.1:\(port)\(path)") else { return master }
+
+            for line in rewritten.components(separatedBy: .newlines)
+            where line.hasPrefix("#EXT-X-STREAM-INF") {
+                jellyfinLog.debug("LECTURE · variante servie · \(line, privacy: .public)")
+            }
+
+            // Se relire soi-même : un serveur injoignable produit exactement la
+            // même erreur d'ouverture qu'un flux illisible, et les distinguer
+            // après coup demande de tout reprendre depuis le début.
+            let (echo, response) = try await URLSession.shared.data(from: local)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            jellyfinLog.debug(
+                "LECTURE · playlist locale · \(local.absoluteString, privacy: .public) · statut \(status, privacy: .public) · \(echo.count, privacy: .public) octets"
+            )
+            guard status == 200, echo.count == rewritten.utf8.count else { return master }
+
+            return local
         } catch {
             jellyfinLog.error(
                 "LECTURE · playlist non réécrite, le lecteur choisira seul : \(error.localizedDescription, privacy: .public)"
