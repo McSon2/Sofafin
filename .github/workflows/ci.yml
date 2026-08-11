@@ -76,10 +76,21 @@ jobs:
 
       - name: Aucune donnée personnelle versionnée
         run: |
-          if git grep -nIE '(192\.168\.[0-9]+\.[0-9]+|DEVELOPMENT_TEAM *= *[A-Z0-9]{10})' -- . ':!*.md'; then
-            echo "::error::Une adresse privée ou un identifiant d'équipe a été versionné."
+          # `192.168.1.10` est l'adresse d'exemple de la documentation et de
+          # l'espace réservé du champ de connexion : c'est toute autre adresse
+          # privée qui trahit une machine réelle. De même, un identifiant
+          # d'équipe fait exactement dix caractères — les valeurs de
+          # remplacement comme VOTREEQUIPE sont plus longues.
+          if git grep -nIE '\b(192\.168|10\.[0-9]+|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+' \
+               -- . ':!*.md' | grep -v '192\.168\.1\.10\b'; then
+            echo "::error::Une adresse privée réelle a été versionnée."
             exit 1
           fi
+          if git grep -nIE 'DEVELOPMENT_TEAM *= *[A-Z0-9]{10}\b' -- . ':!*.md'; then
+            echo "::error::Un identifiant d'équipe a été versionné."
+            exit 1
+          fi
+          echo "Aucune donnée personnelle dans les fichiers suivis.
 
       - name: Aucune chaîne visible non traduite
         run: |
