@@ -90,7 +90,7 @@ jobs:
             echo "::error::Un identifiant d'équipe a été versionné."
             exit 1
           fi
-          echo "Aucune donnée personnelle dans les fichiers suivis.
+          echo "Aucune donnée personnelle dans les fichiers suivis."
 
       - name: Aucune chaîne visible non traduite
         run: |
