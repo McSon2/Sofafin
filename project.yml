@@ -11,10 +11,15 @@ packages:
   JellyfinKit:
     path: Packages/JellyfinKit
 
+# L'identifiant d'équipe n'est pas versionné : il se déclare dans
+# `Signing.local.xcconfig`, que ce fichier inclut s'il existe.
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    DEVELOPMENT_TEAM: VOTREEQUIPE
     CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -110,9 +115,12 @@ schemes:
         Jellyflix-tvOS: all
     run:
       config: Debug
-      # Pré-remplit l'adresse du serveur quand on lance depuis Xcode — sur l'Apple TV
-      # comme sur le simulateur. Sans effet quand l'app est ouverte depuis le menu.
-      commandLineArguments:
-        "-serverAddress 192.168.1.10:8096": true
+      # L'écran de connexion peut être pré-rempli au lancement depuis Xcode, ce
+      # qui évite de saisir une adresse à la télécommande à chaque test. Aucune
+      # adresse n'est versionnée : décommentez la ligne ci-dessous avec la vôtre,
+      # et veillez à ne pas la valider dans un commit.
+      #
+      # commandLineArguments:
+      #   "-serverAddress 192.168.1.10:8096": true
     archive:
       config: Release

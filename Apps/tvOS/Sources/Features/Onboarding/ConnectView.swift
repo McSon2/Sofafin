@@ -62,8 +62,9 @@ struct BackdropAtmosphere: View {
 
 private struct ServerStepView: View {
     @Environment(AppSession.self) private var session
-    /// Pré-remplissable au lancement (`-serverAddress 192.168.1.10:8096`), ce qui
-    /// évite de saisir une adresse à la télécommande à chaque test.
+    /// Pré-remplissable au lancement (`-serverAddress <hôte>:<port>`), ce qui
+    /// évite de saisir une adresse à la télécommande à chaque test. Voir la
+    /// section `schemes` de `project.yml`.
     @State private var address = UserDefaults.standard.string(forKey: "serverAddress") ?? ""
     @State private var isChecking = false
     @FocusState private var focus: Field?

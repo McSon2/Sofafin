@@ -1,0 +1,13 @@
+// Réglages de signature.
+//
+// Ce fichier est versionné et doit rester **neutre** : il ne contient aucun
+// identifiant. Le vôtre se déclare dans `Signing.local.xcconfig`, qui n'est pas
+// suivi par Git — l'inclusion ci-dessous est optionnelle (`#include?`), donc
+// tout fonctionne sans lui.
+//
+//     echo 'DEVELOPMENT_TEAM = VOTREEQUIPE' > Signing.local.xcconfig
+//
+// Sans identifiant d'équipe, le simulateur fonctionne ; seule l'installation
+// sur un Apple TV réel exige une signature.
+
+#include? "Signing.local.xcconfig"

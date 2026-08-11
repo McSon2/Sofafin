@@ -23,3 +23,6 @@ Packages/*/Package.resolved
 
 # Divers
 *.log
+
+# Signature : chacun la sienne, jamais dans le dépôt
+Signing.local.xcconfig
