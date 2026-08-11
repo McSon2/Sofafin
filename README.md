@@ -133,7 +133,7 @@ Apps/TopShelf/            extension de l'étagère du haut (processus séparé)
 Toute la logique vit dans un paquet Swift sans interface, partagé avec l'extension
 et déjà multiplateforme : **un portage macOS ne demanderait de réécrire que les vues.**
 
-`docs/NOTES-PLATEFORME.md`, à la racine, documente les décisions structurantes et les pièges de la
+`docs/NOTES-PLATEFORME.md` documente les décisions structurantes et les pièges de la
 plateforme déjà payés — lecture recommandée avant de toucher au lecteur.
 
 ## Contribuer
