@@ -33,6 +33,43 @@ struct HLSManifestTests {
             .components(separatedBy: .newlines)
     }
 
+    @Test("L'adresse retenue est celle de la première variante")
+    func firstVariantIsResolved() {
+        // C'est elle que le serveur recopie ; les suivantes sont des replis qu'il
+        // ne peut produire qu'en réencodant l'image.
+        let url = HLSManifest.firstVariantURL(in: manifesteHDR, relativeTo: base)
+        #expect(url?.absoluteString == "http://serveur:8096/videos/abc/main.m3u8?VideoCodec=hevc")
+    }
+
+    @Test("Une adresse de variante déjà absolue est rendue telle quelle")
+    func absoluteVariantIsKept() {
+        let manifest = """
+        #EXTM3U
+        #EXT-X-STREAM-INF:BANDWIDTH=1
+        https://ailleurs.example/main.m3u8
+        """
+        #expect(HLSManifest.firstVariantURL(in: manifest, relativeTo: base)?.absoluteString
+            == "https://ailleurs.example/main.m3u8")
+    }
+
+    @Test("Un manifeste sans variante ne donne pas d'adresse")
+    func noVariantGivesNoURL() {
+        // Le serveur a répondu quelque chose d'inattendu : mieux vaut le dire que
+        // rendre une adresse fabriquée, qui échouerait plus loin et plus obscurément.
+        #expect(HLSManifest.firstVariantURL(in: "#EXTM3U\n#EXT-X-VERSION:7", relativeTo: base) == nil)
+    }
+
+    @Test("Les commentaires entre la déclaration et l'adresse sont ignorés")
+    func commentsBetweenDeclarationAndURLAreSkipped() {
+        let manifest = """
+        #EXTM3U
+        #EXT-X-STREAM-INF:BANDWIDTH=1
+        # une note du serveur
+        main.m3u8
+        """
+        #expect(HLSManifest.firstVariantURL(in: manifest, relativeTo: base)?.lastPathComponent == "main.m3u8")
+    }
+
     @Test("Une seule variante subsiste, et c'est la première")
     func onlyTheFirstVariantSurvives() {
         let result = lines(manifesteHDR)

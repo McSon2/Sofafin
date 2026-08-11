@@ -7,6 +7,33 @@ import Foundation
 /// un délégué de chargement sur l'élément lu — appartient à l'application.
 public enum HLSManifest {
 
+    /// L'adresse de la première variante déclarée, en absolu.
+    ///
+    /// La donner directement au lecteur le prive de tout choix : il charge une
+    /// playlist média, pas un catalogue. C'est ce qu'on veut, parce que le choix
+    /// se fait mal — Jellyfin propose trois variantes de même débit dont deux
+    /// replis convertis en SDR qu'il ne peut produire qu'en réencodant l'image,
+    /// et le lecteur, depuis tvOS 13, retient celle qui promet le meilleur
+    /// démarrage plutôt que la première. À débit égal, c'est un tirage au sort.
+    ///
+    /// Réécrire la playlist maître aurait préservé les pistes de sous-titres
+    /// qu'elle déclare, mais suppose de la servir soi-même, et le lecteur de
+    /// l'Apple TV ne lit pas la sienne dans son propre processus : ce qui
+    /// fonctionne sur un Mac y échoue sans rien expliquer.
+    public static func firstVariantURL(in manifest: String, relativeTo base: URL) -> URL? {
+        var lines = manifest.components(separatedBy: .newlines).makeIterator()
+        while let line = lines.next() {
+            guard line.trimmingCharacters(in: .whitespaces).hasPrefix("#EXT-X-STREAM-INF") else { continue }
+            // L'adresse suit la déclaration, éventuellement après des commentaires.
+            while let candidate = lines.next() {
+                let trimmed = candidate.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+                return URL(string: absolute(trimmed, relativeTo: base))
+            }
+        }
+        return nil
+    }
+
     /// Ne conserve que la première variante et rend absolues toutes les adresses.
     ///
     /// Jellyfin propose trois variantes pour un film HDR, toutes au même débit :
