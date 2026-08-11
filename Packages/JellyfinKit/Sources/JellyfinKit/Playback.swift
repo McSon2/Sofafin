@@ -40,10 +40,24 @@ public enum DeviceProfileFactory {
                     context: "Streaming",
                     maxAudioChannels: "6",
                     minSegments: 2,
-                    // Couper ailleurs que sur une image clé produit des segments que
-                    // le lecteur refuse : les clients de référence laissent ffmpeg
-                    // s'aligner sur les images clés.
-                    breakOnNonKeyFrames: false,
+                    // Autoriser les coupes ailleurs que sur une image clé est ce
+                    // qui rend le remux possible, et c'est contre-intuitif.
+                    //
+                    // À `false`, le serveur doit livrer des segments de longueur
+                    // fixe commençant tous par une image clé. Un film dont les
+                    // images clés sont espacées de dix secondes ne s'y prête pas :
+                    // plutôt que d'y renoncer, le serveur réencode l'intégralité de
+                    // la vidéo pour lui en fabriquer. Mesuré sur un 4K HEVC 10 bits :
+                    // 1,88× le temps réel, soit à peine plus vite que la lecture —
+                    // le lecteur réclame un segment, ne l'obtient pas dans les trois
+                    // secondes qu'il s'accorde, abandonne et le redemande.
+                    //
+                    // À `true`, le serveur produit des segments de longueur variable
+                    // et **copie** le flux : `-codec:v copy`, 141× le temps réel,
+                    // HDR et profondeur de bits intacts, processeur au repos. Il pose
+                    // au passage l'étiquette `hvc1` sur le HEVC, sans laquelle
+                    // AVFoundation refuse la vidéo.
+                    breakOnNonKeyFrames: true,
                     enableSubtitlesInManifest: true,
                     copyTimestamps: false,
                     estimateContentLength: false,

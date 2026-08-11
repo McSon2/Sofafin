@@ -60,9 +60,20 @@ struct DeviceProfileTests {
         let video = try #require(profiles.first { $0["Type"] as? String == "Video" })
         #expect(video["Protocol"] as? String == "hls")
         #expect(video["Container"] as? String == "mp4")
-        // Couper ailleurs que sur une image clé produit des segments que le
-        // lecteur refuse.
-        #expect(video["BreakOnNonKeyFrames"] as? Bool == false)
+    }
+
+    @Test("Les coupes hors image clé sont autorisées, sans quoi le serveur réencode")
+    func nonKeyFrameBreaksAreAllowed() throws {
+        // Le réglage se lit à l'envers de son effet. Exiger que chaque segment
+        // commence sur une image clé n'allège pas le travail du serveur : sur un
+        // film dont les images clés sont espacées de dix secondes, cela lui
+        // interdit de découper le flux tel quel, donc il le réencode en entier.
+        // L'autoriser lui permet de copier — mesuré 141× le temps réel contre
+        // 1,88× en réencodage, image et HDR inchangés.
+        let json = try encoded()
+        let profiles = try #require(json["TranscodingProfiles"] as? [[String: Any]])
+        let video = try #require(profiles.first { $0["Type"] as? String == "Video" })
+        #expect(video["BreakOnNonKeyFrames"] as? Bool == true)
     }
 
     @Test("Le débit demandé laisse passer un flux 4K sans le contraindre")

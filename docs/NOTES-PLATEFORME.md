@@ -156,6 +156,36 @@ correspondante déjà sélectionnée — un épisode seul est un cul-de-sac.
 
 ## Pièges tvOS déjà payés
 
+**`BreakOnNonKeyFrames` se lit à l'envers de son effet, et c'est le réglage le plus
+coûteux du projet.** Le profil d'appareil (`Playback.swift`) l'annonce à `true`.
+Exiger l'inverse — que chaque segment HLS commence sur une image clé — paraît plus
+sûr, et c'est ce que faisait la première version. Un film dont les images clés sont
+espacées de dix secondes ne peut alors pas être découpé tel quel : plutôt que d'y
+renoncer, le serveur **réencode toute la vidéo** pour lui en fabriquer.
+
+Mesuré sur un 4K HEVC 10 bits HDR10+ :
+
+| | vitesse serveur | flux vidéo | HDR |
+|---|---|---|---|
+| `false` | **1,88×** | réencodé en 8 bits SDR | perdu |
+| `true` | **141×** | `-codec:v copy` | intact |
+
+À 1,88×, le serveur ne prend aucune avance : AVPlayer réclame un segment, ne
+l'obtient pas dans les trois secondes qu'il s'accorde, abandonne et le redemande —
+d'où des `CoreMediaErrorDomain -12889 · No response for media file in 3.003s` en
+rafale et une lecture qui met des dizaines de secondes à démarrer. En copie, le
+serveur pose au passage l'étiquette `hvc1` sur le HEVC, sans laquelle AVFoundation
+refuse la vidéo (elle n'accepte pas `hev1`, pourtant valide).
+
+Ce réglage décide donc, à lui seul, si un serveur auto-hébergé modeste tient la
+lecture 4K. C'est celui de Swiftfin, qui utilise le même lecteur.
+
+**AVFoundation ne lit pas le Matroska**, et ce n'est pas une régression à guetter :
+aucune version de tvOS ne l'a ajouté. Comme l'essentiel des médiathèques Jellyfin est
+en `.mkv`, le chemin normal de l'application n'est pas la lecture directe mais le
+**remux** — d'où l'importance du point précédent. Les lecteurs qui annoncent « Direct
+Play » sur du MKV embarquent leur propre décodeur.
+
 **Liquid Glass est partiel.** `.buttonStyle(.glass)` et `.glassProminent` existent ;
 `.glassEffect()` et `GlassEffectContainer` **non** (contrairement à iOS/macOS). Les
 surfaces sont reconstruites dans `Design/LiquidGlass.swift` : matière + arête
