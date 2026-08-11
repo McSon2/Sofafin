@@ -2,7 +2,7 @@ import JellyfinKit
 import SwiftUI
 
 @main
-struct JellyflixApp: App {
+struct SofafinApp: App {
     @State private var session = AppSession()
     @Environment(\.scenePhase) private var scenePhase
 

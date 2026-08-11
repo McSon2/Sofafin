@@ -13,7 +13,7 @@ public enum DeviceProfileFactory {
 
     public static func appleTV(maxBitrate: Int = 120_000_000) -> DeviceProfile {
         DeviceProfile(
-            name: "Jellyflix Apple TV",
+            name: "Sofafin Apple TV",
             maxStreamingBitrate: maxBitrate,
             maxStaticBitrate: maxBitrate,
             directPlayProfiles: [

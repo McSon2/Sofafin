@@ -37,11 +37,11 @@ public struct StoredCredentials: Codable, Sendable, Equatable {
 /// mais un jeton de session, révocable depuis Jellyfin (Tableau de bord →
 /// Appareils), sur un appareil qui reste au salon.
 public enum CredentialStore {
-    private static let sessionKey = "jellyflix.session"
+    private static let sessionKey = "sofafin.session"
 
     /// Groupe d'applications partagé avec l'extension Top Shelf : celle-ci tourne
     /// dans un processus distinct et n'a aucun accès aux préférences de l'app.
-    public static let appGroup = "group.com.maximesaltet.jellyflix"
+    public static let appGroup = "group.com.maximesaltet.sofafin"
 
     /// Dossier partagé entre l'application et l'extension Top Shelf.
     ///
@@ -84,7 +84,7 @@ public enum CredentialStore {
             // répond faux sur un dossier absent et vrai sur des volumes qui
             // refusent malgré tout la création de fichiers.
             let candidate = directory.appendingPathComponent("session.json")
-            let probe = directory.appendingPathComponent(".jellyflix-probe")
+            let probe = directory.appendingPathComponent(".sofafin-probe")
             guard (try? Data().write(to: probe)) != nil else { continue }
             try? FileManager.default.removeItem(at: probe)
 
@@ -196,7 +196,7 @@ public enum CredentialStore {
     /// d'un lancement à l'autre. En changer ferait apparaître un second appareil
     /// dans la liste des sessions du serveur.
     public static func deviceId() -> String {
-        let key = "jellyflix.deviceId"
+        let key = "sofafin.deviceId"
         if let existing = UserDefaults.standard.string(forKey: key) { return existing }
         let generated = UUID().uuidString
         UserDefaults.standard.set(generated, forKey: key)

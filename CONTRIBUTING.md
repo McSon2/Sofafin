@@ -1,4 +1,4 @@
-# Contribuer à Jellyflix
+# Contribuer à Sofafin
 
 Merci de vous y intéresser. Ce document dit comment démarrer, et surtout **ce qu'il
 ne faut pas défaire sans le savoir** : plusieurs choix du projet paraissent
@@ -8,8 +8,8 @@ arbitraires alors qu'ils corrigent un piège précis de la plateforme.
 
 ```bash
 brew install xcodegen
-git clone https://github.com/McSon2/Jellyflix.git
-cd Jellyflix
+git clone https://github.com/McSon2/Sofafin.git
+cd Sofafin
 xcodegen generate
 ```
 
@@ -25,7 +25,7 @@ echo 'DEVELOPMENT_TEAM = VOTREEQUIPE' > Signing.local.xcconfig
 ### Compiler
 
 ```bash
-xcodebuild -project Jellyflix.xcodeproj -scheme Jellyflix-tvOS \
+xcodebuild -project Sofafin.xcodeproj -scheme Sofafin-tvOS \
   -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' \
   -configuration Debug clean build
 ```
@@ -36,10 +36,10 @@ récentes que le binaire. On installe alors une version périmée en croyant tes
 correction. En cas de doute, vérifiez qu'un symbole récent est bien présent :
 
 ```bash
-nm …/Jellyflix-tvOS.app/Jellyflix-tvOS.debug.dylib | grep -c MonNouveauType
+nm …/Sofafin-tvOS.app/Sofafin-tvOS.debug.dylib | grep -c MonNouveauType
 ```
 
-En Debug, Xcode place le code applicatif dans `Jellyflix-tvOS.debug.dylib`, **pas**
+En Debug, Xcode place le code applicatif dans `Sofafin-tvOS.debug.dylib`, **pas**
 dans l'exécutable — dont la date ne bouge jamais.
 
 ## Ce qu'il ne faut pas défaire
@@ -87,7 +87,7 @@ donnent le mode de lecture négocié, l'URL du flux et les codes HTTP des segmen
 refusés.
 
 ```bash
-xcrun simctl spawn <UDID> log stream --predicate 'subsystem == "com.maximesaltet.jellyflix"'
+xcrun simctl spawn <UDID> log stream --predicate 'subsystem == "com.maximesaltet.sofafin"'
 ```
 
 Précisez aussi la version de Jellyfin, et les caractéristiques du fichier (conteneur,

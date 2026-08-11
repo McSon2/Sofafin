@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Jetons visuels de Jellyflix.
+/// Jetons visuels de Sofafin.
 ///
 /// La grille est celle de Netflix — fond quasi noir, contenu qui flotte au-dessus
 /// d'une image plein cadre, accent chaud unique — mais les surfaces empruntent au

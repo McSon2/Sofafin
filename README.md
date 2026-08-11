@@ -1,4 +1,4 @@
-# Jellyflix
+# Sofafin
 
 **Un client Jellyfin natif pour Apple TV.** Écrit en SwiftUI, bâti sur AVKit, pensé
 pour être regardé depuis un canapé plutôt qu'inspecté de près.
@@ -65,10 +65,10 @@ Aucune version binaire n'est distribuée pour l'instant : il faut compiler.
 ### Compiler
 
 ```bash
-git clone https://github.com/McSon2/Jellyflix.git
-cd Jellyflix
+git clone https://github.com/McSon2/Sofafin.git
+cd Sofafin
 xcodegen generate
-open Jellyflix.xcodeproj
+open Sofafin.xcodeproj
 ```
 
 Le projet Xcode est **généré** depuis `project.yml` : ne le modifiez pas à la main,
@@ -112,7 +112,7 @@ Packages/JellyfinKit/     cœur partagé, sans dépendance à l'interface
   Endpoints+*             authentification, bibliothèque, images
   Playback                profil d'appareil, négociation, rapports de session
   CredentialStore         session persistée dans le groupe d'applications
-  DeepLink                jellyflix://play/<id> et jellyflix://item/<id>
+  DeepLink                sofafin://play/<id> et sofafin://item/<id>
 
 Apps/tvOS/Sources/
   AppSession              état global : phase d'authentification, client, bibliothèques

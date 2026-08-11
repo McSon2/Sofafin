@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Construit le catalogue d'icônes tvOS de Jellyflix.
+"""Construit le catalogue d'icônes tvOS de Sofafin.
 
 tvOS n'utilise pas une image plate mais une pile de calques que le système écarte
 en parallaxe quand l'icône prend le focus. Deux règles se paient cher si on les
@@ -157,7 +157,7 @@ def play_glyph(size: tuple[int, int], scale: float = 1.0, center_y: float = 0.5)
     return image
 
 
-def wordmark(size, text="JELLYFLIX", baseline=0.74, size_ratio=0.15) -> Image.Image:
+def wordmark(size, text="SOFAFIN", baseline=0.74, size_ratio=0.15) -> Image.Image:
     width, height = size
     image = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)

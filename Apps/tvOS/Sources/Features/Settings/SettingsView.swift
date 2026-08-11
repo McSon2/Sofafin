@@ -30,7 +30,7 @@ struct SettingsView: View {
 
                 Spacer()
 
-                Text("Jellyflix \(appVersion) — lecteur natif pour Jellyfin")
+                Text("Sofafin \(appVersion) — lecteur natif pour Jellyfin")
                     .font(Theme.Font.badge)
                     .foregroundStyle(Theme.Palette.tertiaryText)
             }

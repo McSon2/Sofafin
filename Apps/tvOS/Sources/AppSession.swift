@@ -63,7 +63,7 @@ final class AppSession {
 
     init() {
         identity = ClientIdentity(
-            name: "Jellyflix",
+            name: "Sofafin",
             version: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0",
             deviceName: "Apple TV",
             deviceId: CredentialStore.deviceId()

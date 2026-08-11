@@ -2,7 +2,7 @@ import JellyfinKit
 import TVServices
 
 /// Alimente l'étagère du haut de l'écran d'accueil tvOS : ce que le système affiche
-/// au-dessus de la grille quand l'icône de Jellyflix est sélectionnée.
+/// au-dessus de la grille quand l'icône de Sofafin est sélectionnée.
 ///
 /// L'extension tourne dans un processus séparé, sans accès à l'état de l'app : elle
 /// reconstruit un client à partir de la session partagée via le groupe
@@ -24,7 +24,7 @@ final class ContentProvider: TVTopShelfContentProvider {
         jellyfinLog.debug("Top Shelf : contenu demandé par le système")
 
         guard let client = CredentialStore.restoreClient(
-            clientName: "Jellyflix Top Shelf",
+            clientName: "Sofafin Top Shelf",
             deviceName: "Apple TV"
         ) else {
             jellyfinLog.error("Top Shelf : aucune session dans le groupe \(CredentialStore.appGroup, privacy: .public)")

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Jellyflix</string>
+	<string>Sofafin</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,10 +22,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.maximesaltet.jellyflix</string>
+			<string>com.maximesaltet.sofafin</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>jellyflix</string>
+				<string>sofafin</string>
 			</array>
 		</dict>
 	</array>
@@ -43,7 +43,7 @@
 		<string>_jellyfin._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Jellyflix se connecte à votre serveur Jellyfin sur le réseau local pour lire votre médiathèque.</string>
+	<string>Sofafin se connecte à votre serveur Jellyfin sur le réseau local pour lire votre médiathèque.</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
 </dict>

@@ -2,8 +2,8 @@ import Foundation
 import OSLog
 
 /// Journal des échanges avec le serveur. À suivre pendant un test avec :
-/// `xcrun simctl spawn booted log stream --predicate 'subsystem == "com.maximesaltet.jellyflix"'`
-public let jellyfinLog = Logger(subsystem: "com.maximesaltet.jellyflix", category: "api")
+/// `xcrun simctl spawn booted log stream --predicate 'subsystem == "com.maximesaltet.sofafin"'`
+public let jellyfinLog = Logger(subsystem: "com.maximesaltet.sofafin", category: "api")
 
 // MARK: - Identité du client
 

@@ -75,7 +75,7 @@ private struct ServerStepView: View {
         VStack(spacing: 0) {
             Spacer().frame(height: 140)
 
-            Text("Jellyflix")
+            Text("Sofafin")
                 .font(.system(size: 124, weight: .heavy))
                 .foregroundStyle(
                     LinearGradient(
