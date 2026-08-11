@@ -35,13 +35,23 @@ struct PlayerView: View {
                     Button("Fermer") { dismiss() }
                         .buttonStyle(.glass)
                 }
-            } else if engine.context == nil {
-                VStack(spacing: 24) {
-                    ProgressView().tint(.white).scaleEffect(1.6)
-                    Text("Préparation de la lecture…")
-                        .font(Theme.Font.caption)
-                        .foregroundStyle(Theme.Palette.secondaryText)
+            } else if engine.phase == .loading {
+                // Opaque, et jusqu'à ce que la lecture démarre pour de bon : le
+                // lecteur affiche la première image du film dès qu'il a de quoi
+                // décoder, avant même d'avoir rejoint la position de reprise.
+                // Laisser paraître cette image donne à croire que le film
+                // recommence au début.
+                ZStack {
+                    Color.black
+                    VStack(spacing: 24) {
+                        ProgressView().tint(.white).scaleEffect(1.6)
+                        Text("Préparation de la lecture…")
+                            .font(Theme.Font.caption)
+                            .foregroundStyle(Theme.Palette.secondaryText)
+                    }
                 }
+                .ignoresSafeArea()
+                .transition(.opacity)
             }
         }
         .task {
