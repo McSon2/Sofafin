@@ -103,6 +103,26 @@ extension PlaybackEngine {
         jellyfinLog.debug("LECTURE · flux : \(plan.url.absoluteString, privacy: .public)")
     }
 
+    /// Quelle variante du manifeste le lecteur a réellement retenue.
+    ///
+    /// Toute la différence entre une lecture instantanée et une lecture qui bégaie
+    /// tient là : la première variante d'un film HDR est recopiée par le serveur,
+    /// les suivantes sont réencodées. Le ressenti ne permet pas de trancher, et
+    /// l'URI de la variante, elle, est sans ambiguïté — `AllowVideoStreamCopy=false`
+    /// signe un réencodage.
+    func logSelectedVariant(of item: AVPlayerItem) {
+        guard let event = item.accessLog()?.events.last else { return }
+        let uri = event.uri ?? "inconnue"
+        let recopie = !uri.contains("AllowVideoStreamCopy=false")
+        jellyfinLog.debug(
+            """
+            LECTURE · variante retenue · \(recopie ? "remux (flux recopié)" : "RÉENCODAGE", privacy: .public) \
+            · débit annoncé \(Int(event.indicatedBitrate / 1000), privacy: .public) kb/s \
+            · \(uri, privacy: .public)
+            """
+        )
+    }
+
     /// Vide le journal d'erreurs de l'élément dans le nôtre.
     private func logErrorEntries(of item: AVPlayerItem) {
         guard let log = item.errorLog() else { return }

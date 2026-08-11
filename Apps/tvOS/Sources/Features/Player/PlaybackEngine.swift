@@ -91,6 +91,9 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     /// clignoter et lui volerait le focus.
     var offeredSegmentId: String?
     private var hasStopped = false
+    /// La variante retenue n'est journalisée qu'une fois par lecture : le
+    /// battement passe toutes les 250 ms et en noierait le journal.
+    var hasLoggedVariant = false
 
     // MARK: Cycle de vie
 
@@ -208,10 +211,24 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         let newContext = PlaybackContext(plan: plan, segments: segments, nextEpisode: next, siblings: siblings)
         context = newContext
         hasStopped = false
+        hasLoggedVariant = false
 
         let playerItem = AVPlayerItem(asset: AVURLAsset(url: plan.url))
         playerItem.externalMetadata = Self.metadata(for: full)
         // Pas de `navigationMarkerGroups` : voir `PlaybackEngine+Decorations`.
+
+        // Le manifeste d'un film HDR contient trois variantes de même débit : la
+        // première conserve la plage d'origine et permet au serveur de recopier le
+        // flux ; les deux suivantes sont des replis convertis en SDR, qu'il ne peut
+        // produire qu'en réencodant. Depuis tvOS 13, le lecteur ne prend plus la
+        // première venue mais celle qui lui promet le meilleur démarrage — et à
+        // débit égal, il tombe sur un repli, donc sur un réencodage 4K que le
+        // serveur ne tient pas.
+        //
+        // Cette propriété rétablit le comportement d'avant : suivre l'ordre du
+        // manifeste, que le serveur a rempli en connaissance de cause. Elle doit
+        // être posée avant que le choix n'ait lieu, donc avant `replaceCurrentItem`.
+        playerItem.startsOnFirstEligibleVariant = true
 
         player.replaceCurrentItem(with: playerItem)
         player.appliesMediaSelectionCriteriaAutomatically = true
@@ -317,7 +334,13 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
                     self.lastTimeControlStatus = self.player.timeControlStatus
                     self.refreshNowPlayingPosition()
                     // La première image est arrivée : plus rien à surveiller.
-                    if self.player.timeControlStatus == .playing { self.cancelStartWatchdog() }
+                    if self.player.timeControlStatus == .playing {
+                        self.cancelStartWatchdog()
+                        if let item = self.player.currentItem, !self.hasLoggedVariant {
+                            self.hasLoggedVariant = true
+                            self.logSelectedVariant(of: item)
+                        }
+                    }
                 }
 
                 self.tickCount += 1
