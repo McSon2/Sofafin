@@ -185,7 +185,8 @@ def placeholder_layers(size: tuple[int, int]) -> dict[str, Image.Image]:
 
 # MARK: - Écriture du catalogue
 
-def build_layer(stack: Path, name: str, renders: dict[int, Image.Image], opaque: bool) -> None:
+def build_layer(stack: Path, name: str, renders: dict[int, Image.Image], opaque: bool,
+                idiom: str = "tv") -> None:
     layer = stack / f"{name}.imagestacklayer"
     write_json(layer / "Contents.json", {"info": {"author": "xcode", "version": 1}})
 
@@ -196,12 +197,13 @@ def build_layer(stack: Path, name: str, renders: dict[int, Image.Image], opaque:
     for scale, render in sorted(renders.items()):
         filename = f"{name.lower()}{'' if scale == 1 else f'@{scale}x'}.png"
         (flatten_on_black(render) if opaque else render).save(content / filename)
-        images.append({"idiom": "tv", "filename": filename, "scale": f"{scale}x"})
+        images.append({"idiom": idiom, "filename": filename, "scale": f"{scale}x"})
 
     write_json(content / "Contents.json", {"images": images, "info": {"author": "xcode", "version": 1}})
 
 
-def build_stack(path: Path, size: tuple[int, int], scales: list[int], sources: dict[str, Image.Image] | None) -> None:
+def build_stack(path: Path, size: tuple[int, int], scales: list[int],
+                sources: dict[str, Image.Image] | None, idiom: str = "tv") -> None:
     if path.exists():
         shutil.rmtree(path)
 
@@ -227,10 +229,11 @@ def build_stack(path: Path, size: tuple[int, int], scales: list[int], sources: d
                 renders[scale] = Image.new("RGBA", scaled, (0, 0, 0, 0))
 
         # Seul le calque du fond doit être opaque et plein cadre.
-        build_layer(path, name, renders, opaque=(name == "Back"))
+        build_layer(path, name, renders, opaque=(name == "Back"), idiom=idiom)
 
 
-def build_top_shelf(path: Path, size: tuple[int, int], stem: str, source: Image.Image | None) -> None:
+def build_top_shelf(path: Path, size: tuple[int, int], stem: str,
+                    source: Image.Image | None, idiom: str = "tv") -> None:
     if path.exists():
         shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
@@ -252,7 +255,7 @@ def build_top_shelf(path: Path, size: tuple[int, int], stem: str, source: Image.
 
         filename = f"{stem}{'' if scale == 1 else '@2x'}.png"
         render.save(path / filename)
-        images.append({"idiom": "tv", "filename": filename, "scale": f"{scale}x"})
+        images.append({"idiom": idiom, "filename": filename, "scale": f"{scale}x"})
 
     write_json(path / "Contents.json", {"images": images, "info": {"author": "xcode", "version": 1}})
 
@@ -289,6 +292,10 @@ def main() -> None:
         {
             "assets": [
                 {"filename": "App Icon.imagestack", "idiom": "tv", "role": "primary-app-icon", "size": "400x240"},
+                # L'icône de la fiche App Store se distingue par sa taille, pas
+                # par son idiome : `tv-marketing` ici — comme sur les imagesets
+                # des couches — fait échouer la vérification du paquet avec
+                # « Missing Image Asset … App Store Icon » (ITMS-90471).
                 {"filename": "App Icon - App Store.imagestack", "idiom": "tv", "role": "primary-app-icon", "size": "1280x768"},
                 {"filename": "Top Shelf Image.imageset", "idiom": "tv", "role": "top-shelf-image", "size": "1920x720"},
                 {"filename": "Top Shelf Image Wide.imageset", "idiom": "tv", "role": "top-shelf-image-wide", "size": "2320x720"},
