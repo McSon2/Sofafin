@@ -53,6 +53,19 @@ public extension JellyfinClient {
     }
 
     /// « Prochains épisodes » des séries commencées.
+    /// Suite de ce que l'utilisateur regarde.
+    ///
+    /// `enableResumable` est à `false` : un épisode déjà entamé appartient à
+    /// « Reprendre la lecture », l'afficher aux deux endroits ferait doublon.
+    ///
+    /// Un S01E01 qui apparaît ici n'est **pas** un défaut de la requête : Jellyfin
+    /// ne propose le premier épisode d'une série que si celle-ci porte une trace de
+    /// lecture. Une séance abandonnée sous le seuil de reprise du serveur — les
+    /// premières minutes d'un essai — suffit à marquer la série comme commencée
+    /// sans rendre l'épisode reprenable : il ressort alors comme prochain à voir.
+    /// Le paramètre `disableFirstEpisode` masquerait ce cas, mais avec lui une
+    /// série réellement entamée de quelques minutes disparaîtrait aussi de la
+    /// rangée. La correction est côté serveur : effacer l'historique de la série.
     func nextUp(limit: Int = 16) async throws -> [MediaItem] {
         let response: ItemsResponse = try await get("Shows/NextUp", query: [
             URLQueryItem("userId", userId),
