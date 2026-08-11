@@ -139,10 +139,10 @@ extension PlaybackEngine {
     private static func readableMessage(for failure: PlaybackFailure) -> String {
         switch (failure.domain, failure.code) {
         case (NSURLErrorDomain, NSURLErrorTimedOut):
-            return "Le serveur n'a pas répondu à temps. Il est peut-être occupé à transcoder."
+            return L("Le serveur n'a pas répondu à temps. Il est peut-être occupé à transcoder.")
         case (NSURLErrorDomain, NSURLErrorCannotConnectToHost),
              (NSURLErrorDomain, NSURLErrorNetworkConnectionLost):
-            return "Connexion au serveur perdue pendant la lecture."
+            return L("Connexion au serveur perdue pendant la lecture.")
         case ("CoreMediaErrorDomain", let code):
             return """
                 Le flux est illisible (code \(code)). Le transcodage a probablement échoué \

@@ -6,6 +6,15 @@ options:
     macOS: "26.0"
   createIntermediateGroups: true
   groupSortPosition: top
+  # Le français est la langue d'origine : les clés du catalogue *sont* les
+  # phrases françaises, ce qui garde le code lisible sans table de symboles.
+  developmentLanguage: fr
+
+fileGroups:
+  - README.md
+  - README.fr.md
+  - CONTRIBUTING.md
+  - docs
 
 packages:
   JellyfinKit:

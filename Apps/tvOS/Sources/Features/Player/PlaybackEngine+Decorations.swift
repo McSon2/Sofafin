@@ -172,7 +172,7 @@ extension PlaybackEngine {
         let chapters = context.chapters
         if chapters.count > 1 {
             let actions = chapters.enumerated().map { index, chapter in
-                UIAction(title: chapter.name ?? "Chapitre \(index + 1)",
+                UIAction(title: chapter.name ?? L("Chapitre \(index + 1)"),
                          subtitle: chapter.start.timecode) { [weak self] _ in
                     MainActor.assumeIsolated {
                         self?.player.seek(
@@ -183,14 +183,14 @@ extension PlaybackEngine {
                     }
                 }
             }
-            items.append(UIMenu(title: "Chapitres",
+            items.append(UIMenu(title: L("Chapitres"),
                                 image: UIImage(systemName: "list.bullet"),
                                 children: actions))
         }
 
         if let next = context.nextEpisode {
             items.append(
-                UIAction(title: "Épisode suivant",
+                UIAction(title: L("Épisode suivant"),
                          subtitle: next.rowSubtitle,
                          image: UIImage(systemName: "forward.end.fill")) { [weak self] _ in
                     MainActor.assumeIsolated {
@@ -201,7 +201,7 @@ extension PlaybackEngine {
         }
 
         items.append(
-            UIAction(title: "Marquer comme vu",
+            UIAction(title: L("Marquer comme vu"),
                      image: UIImage(systemName: "checkmark.circle.fill")) { [weak self] _ in
                 MainActor.assumeIsolated { self?.markPlayedAndClose() }
             }
@@ -220,7 +220,7 @@ extension PlaybackEngine {
 
         if context.siblings.count > 1 {
             panels.append(panel(
-                titled: context.item.seasonName ?? "Épisodes",
+                titled: context.item.seasonName ?? L("Épisodes"),
                 height: 360,
                 content: EpisodesPanel(
                     episodes: context.siblings,
@@ -236,7 +236,7 @@ extension PlaybackEngine {
         let cast = (context.item.people ?? []).filter { $0.type == "Actor" }
         if !cast.isEmpty {
             panels.append(panel(
-                titled: "Distribution",
+                titled: L("Distribution"),
                 height: 300,
                 content: CastPanel(cast: cast, client: client)
             ))

@@ -150,9 +150,9 @@ struct MediaCardMenu: View {
 
     private var detailsLabel: String {
         switch item.type {
-        case .episode: return "Voir la série"
-        case .boxSet: return "Voir la collection"
-        default: return "Voir la fiche"
+        case .episode: return L("Voir la série")
+        case .boxSet: return L("Voir la collection")
+        default: return L("Voir la fiche")
         }
     }
 }

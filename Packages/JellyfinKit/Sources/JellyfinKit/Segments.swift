@@ -21,12 +21,12 @@ public enum MediaSegmentKind: String, Codable, Sendable, Hashable {
     /// « Passer » seul laisse l'utilisateur deviner ce qu'il perd.
     public var skipLabel: String {
         switch self {
-        case .intro: return "Passer l'intro"
-        case .outro: return "Passer le générique"
-        case .recap: return "Passer le résumé"
-        case .preview: return "Passer la bande-annonce"
-        case .commercial: return "Passer la publicité"
-        case .unknown: return "Passer ce passage"
+        case .intro: return L("Passer l'intro")
+        case .outro: return L("Passer le générique")
+        case .recap: return L("Passer le résumé")
+        case .preview: return L("Passer la bande-annonce")
+        case .commercial: return L("Passer la publicité")
+        case .unknown: return L("Passer ce passage")
         }
     }
 

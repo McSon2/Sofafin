@@ -19,14 +19,14 @@ extension MediaItem {
             // la synthèse vocale épellerait lettre à lettre.
             parts.append(seriesName ?? displayTitle)
             if let season = parentIndexNumber, let episode = indexNumber {
-                parts.append("saison \(season), épisode \(episode)")
+                parts.append(L("saison \(season), épisode \(episode)"))
             }
             if let name { parts.append(name) }
         case .boxSet:
             parts.append(displayTitle)
-            parts.append("collection")
+            parts.append(L("collection"))
             if let count = childCount, count > 0 {
-                parts.append(count == 1 ? "1 titre" : "\(count) titres")
+                parts.append(L("\(count) titres"))
             }
         default:
             parts.append(displayTitle)
@@ -35,20 +35,20 @@ extension MediaItem {
 
         if let runtimeLabel { parts.append(runtimeLabel) }
         if let rating = communityRating {
-            parts.append("noté \(String(format: "%.1f", rating)) sur 10")
+            parts.append(L("noté \(String(format: "%.1f", rating)) sur 10"))
         }
 
         // L'état de lecture ferme la phrase : c'est l'information qu'on cherche en
         // parcourant une rangée, et le coin coloré la donne aux voyants.
         if let fraction = progressFraction {
-            parts.append("commencé, \(Int(fraction * 100)) pour cent vus")
+            parts.append(L("commencé, \(Int(fraction * 100)) pour cent vus"))
         } else if isPlayed {
-            parts.append("vu")
+            parts.append(L("vu"))
         } else if let remaining = userData?.unplayedItemCount, remaining > 0 {
-            parts.append(remaining == 1 ? "1 épisode non vu" : "\(remaining) épisodes non vus")
+            parts.append(L("\(remaining) épisodes non vus"))
         }
 
-        if isFavorite { parts.append("favori") }
+        if isFavorite { parts.append(L("favori")) }
 
         return parts.joined(separator: ", ")
     }
@@ -57,10 +57,10 @@ extension MediaItem {
     /// la même chose selon le titre : un épisode se lance, un film entamé demande
     /// où reprendre, une collection s'ouvre.
     var accessibilityActionHint: String {
-        if type == .boxSet { return "Ouvre la collection" }
-        if resumePosition != nil { return "Propose de reprendre ou de recommencer" }
-        if type == .episode { return "Lance la lecture" }
-        return "Ouvre la fiche"
+        if type == .boxSet { return L("Ouvre la collection") }
+        if resumePosition != nil { return L("Propose de reprendre ou de recommencer") }
+        if type == .episode { return L("Lance la lecture") }
+        return L("Ouvre la fiche")
     }
 }
 

@@ -22,15 +22,15 @@ final class HomeModel {
 
         var title: String {
             switch self {
-            case .unreachable: return "Serveur injoignable"
-            case .empty: return "Médiathèque vide"
+            case .unreachable: return L("Serveur injoignable")
+            case .empty: return L("Médiathèque vide")
             }
         }
 
         var message: String {
             switch self {
             case .unreachable(let detail): return detail
-            case .empty: return "Aucun film ni série n'a été trouvé sur ce serveur."
+            case .empty: return L("Aucun film ni série n'a été trouvé sur ce serveur.")
             }
         }
 
@@ -104,13 +104,13 @@ final class HomeModel {
             await (nextUp, latest, movies, series, favorites, collections)
 
         var built: [HomeSection] = []
-        append(&built, id: "resume", "Reprendre la lecture", .landscape, resumeItems)
-        append(&built, id: "nextup", "Prochains épisodes", .landscape, nextUpItems)
-        append(&built, id: "latest", "Ajouts récents", .poster, latestItems)
-        append(&built, id: "favorites", "Mes favoris", .poster, favoriteItems)
-        append(&built, id: "collections", "Collections", .poster, collectionItems)
-        append(&built, id: "movies", "Films", .poster, movieItems)
-        append(&built, id: "series", "Séries", .poster, seriesItems)
+        append(&built, id: "resume", L("Reprendre la lecture"), .landscape, resumeItems)
+        append(&built, id: "nextup", L("Prochains épisodes"), .landscape, nextUpItems)
+        append(&built, id: "latest", L("Ajouts récents"), .poster, latestItems)
+        append(&built, id: "favorites", L("Mes favoris"), .poster, favoriteItems)
+        append(&built, id: "collections", L("Collections"), .poster, collectionItems)
+        append(&built, id: "movies", L("Films"), .poster, movieItems)
+        append(&built, id: "series", L("Séries"), .poster, seriesItems)
 
         // Une vue reconstruite annule ses requêtes en vol : le résultat est alors
         // vide sans que le serveur soit en cause. Conclure ici afficherait à tort

@@ -212,16 +212,16 @@ struct DetailView: View {
     private func playbackHint(for entryPoint: MediaItem) -> String {
         guard current.type != .movie else { return "" }
         if let code = entryPoint.episodeCode, let name = entryPoint.name {
-            return "Lance \(code), \(name)"
+            return L("Lance \(code), \(name)")
         }
-        return "Lance \(entryPoint.displayTitle)"
+        return L("Lance \(entryPoint.displayTitle)")
     }
 
     private func playLabel(for entryPoint: MediaItem) -> String {
         if current.type == .series {
-            return episodes.contains(where: { $0.resumePosition != nil }) ? "Reprendre" : "Lecture"
+            return episodes.contains(where: { $0.resumePosition != nil }) ? L("Reprendre") : L("Lecture")
         }
-        return entryPoint.resumePosition != nil ? "Reprendre" : "Lecture"
+        return entryPoint.resumePosition != nil ? L("Reprendre") : L("Lecture")
     }
 
     /// Ce que lance le bouton de lecture — jamais le sujet de la fiche quand celui-ci
@@ -269,7 +269,7 @@ struct DetailView: View {
 
     private var episodeList: some View {
         MediaRow(
-            title: selectedSeason?.displayTitle ?? "Épisodes",
+            title: selectedSeason?.displayTitle ?? L("Épisodes"),
             items: episodes,
             layout: .landscape,
             scrollTo: originEpisode?.id ?? firstUnwatchedEpisodeId,
@@ -300,7 +300,7 @@ struct DetailView: View {
     /// on parcourt une collection pour choisir, pas pour reprendre où l'on en était.
     private var collectionRow: some View {
         MediaRow(
-            title: "Films",
+            title: L("Films"),
             items: collectionItems,
             layout: .poster,
             onOpenDetails: { pushedItem = $0 },
@@ -366,7 +366,7 @@ struct DetailView: View {
     @ViewBuilder
     private var similarRow: some View {
         MediaRow(
-            title: "Dans le même esprit",
+            title: L("Dans le même esprit"),
             items: similar,
             layout: .poster,
             onOpenDetails: { pushedItem = $0 },

@@ -5,6 +5,9 @@ import SwiftUI
 struct SofafinApp: App {
     @State private var session = AppSession()
     @Environment(\.scenePhase) private var scenePhase
+    /// La langue choisie est propagée par l'environnement : c'est ce qui fait
+    /// changer les `Text` de toute l'interface sans redémarrer l'application.
+    @AppStorage("appLanguage") private var language: AppLanguage = .system
 
     init() {
         // Une médiathèque affiche des centaines d'affiches : sans cache disque
@@ -20,6 +23,11 @@ struct SofafinApp: App {
             RootView()
                 .environment(session)
                 .preferredColorScheme(.dark)
+                .environment(\.locale, language.locale ?? .autoupdatingCurrent)
+                // Reconstruit l'arbre au changement de langue : sans cela, les
+                // vues déjà rendues garderaient les chaînes résolues dans
+                // l'ancienne langue jusqu'à ce qu'une autre raison les rafraîchisse.
+                .id(language)
                 .task { await session.restore() }
                 .onOpenURL { session.handle($0) }
                 // Le serveur vit sans nous : un épisode regardé sur le téléphone

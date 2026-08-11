@@ -27,10 +27,10 @@ struct LibraryView: View {
 
         var label: String {
             switch self {
-            case .dateAdded: return "Ajout récent"
-            case .title: return "Titre"
-            case .year: return "Année"
-            case .rating: return "Note"
+            case .dateAdded: return L("Ajout récent")
+            case .title: return L("Titre")
+            case .year: return L("Année")
+            case .rating: return L("Note")
             }
         }
 
@@ -55,10 +55,10 @@ struct LibraryView: View {
 
         var label: String {
             switch self {
-            case .all: return "Tout"
-            case .unwatched: return "Non vus"
-            case .watched: return "Vus"
-            case .favorites: return "Favoris"
+            case .all: return L("Tout")
+            case .unwatched: return L("Non vus")
+            case .watched: return L("Vus")
+            case .favorites: return L("Favoris")
             }
         }
 
@@ -180,8 +180,8 @@ struct LibraryView: View {
 
     private var countLabel: String {
         isCollectionLibrary
-            ? (totalCount == 1 ? "1 collection" : "\(totalCount) collections")
-            : "\(totalCount) titres"
+            ? L("\(totalCount) collections")
+            : L("\(totalCount) titres")
     }
 
     private var watchFilterPicker: some View {

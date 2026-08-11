@@ -148,7 +148,7 @@ public struct ChapterInfo: Codable, Sendable, Hashable {
 }
 
 public extension MediaItem {
-    var displayTitle: String { name ?? originalTitle ?? "Sans titre" }
+    var displayTitle: String { name ?? originalTitle ?? L("Sans titre") }
 
     /// Durée totale, en secondes.
     var runtime: Double? { runTimeTicks.map(\.secondsFromTicks) }
@@ -156,7 +156,9 @@ public extension MediaItem {
     var runtimeLabel: String? {
         guard let runtime, runtime > 0 else { return nil }
         let minutes = Int(runtime / 60)
-        return minutes >= 60 ? "\(minutes / 60) h \(String(format: "%02d", minutes % 60))" : "\(minutes) min"
+        return minutes >= 60
+            ? L("\(minutes / 60) h \(String(format: "%02d", minutes % 60))")
+            : L("\(minutes) min")
     }
 
     /// Position de reprise en secondes, seulement si la lecture est réellement en cours
@@ -193,7 +195,7 @@ public extension MediaItem {
         // TMDb ne date pas les collections : leur année est vide une fois sur deux.
         // Leur taille dit de toute façon mieux ce qu'on s'apprête à ouvrir.
         if type == .boxSet, let count = childCount, count > 0 {
-            return count == 1 ? "1 titre" : "\(count) titres"
+            return L("\(count) titres")
         }
         return productionYear.map(String.init)
     }

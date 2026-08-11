@@ -280,9 +280,9 @@ public struct PlaybackPlan: Sendable {
 
         public var label: String {
             switch self {
-            case .directPlay: return "Lecture directe"
+            case .directPlay: return L("Lecture directe")
             case .directStream: return "Remux"
-            case .transcode: return "Transcodage"
+            case .transcode: return L("Transcodage")
             }
         }
     }

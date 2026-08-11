@@ -32,7 +32,7 @@ struct PersonView: View {
                     EmptyStateView(
                         icon: "person.slash",
                         title: "Aucun titre",
-                        message: "Rien dans ta médiathèque avec \(person.name ?? "cette personne")."
+                        message: L("Rien dans ta médiathèque avec \(person.name ?? String(localized: "cette personne")).")
                     )
                 } else {
                     grid
@@ -77,7 +77,7 @@ struct PersonView: View {
     private var subtitle: String {
         let count = items.count
         guard count > 0 else { return " " }
-        return count == 1 ? "1 titre" : "\(count) titres"
+        return L("\(count) titres")
     }
 
     private var grid: some View {
