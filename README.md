@@ -4,73 +4,73 @@
 
 # Sofafin
 
-**Un client Jellyfin natif pour Apple TV.** Écrit en SwiftUI, bâti sur AVKit, pensé
-pour être regardé depuis un canapé plutôt qu'inspecté de près.
+**A native Jellyfin client for Apple TV.** Written in SwiftUI, built on AVKit, and
+designed to be watched from a couch rather than inspected up close.
 
-[![Plateforme](https://img.shields.io/badge/plateforme-tvOS%2026%2B-black)](https://developer.apple.com/tvos/)
+[![Platform](https://img.shields.io/badge/platform-tvOS%2026%2B-black)](https://developer.apple.com/tvos/)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange)](https://swift.org)
-[![Licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-<img src="Design/github/screenshot-accueil.png" alt="L'accueil de Sofafin" width="100%">
+**English** · [Français](README.fr.md)
+
+<img src="Design/github/screenshot-accueil.png" alt="The Sofafin home screen" width="100%">
 
 </div>
 
 ---
 
-## Pourquoi
+## Why
 
-Jellyfin sait déjà servir une médiathèque. Ce qui manquait sur Apple TV, c'était un
-client qui se comporte comme les applications que le système propose lui-même : un
-grand visuel qui réagit au focus, des rangées qui défilent sans à-coups, et surtout
-**le lecteur d'Apple plutôt qu'un lecteur maison**.
+Jellyfin already knows how to serve a media library. What was missing on Apple TV
+was a client that behaves like the apps the system ships itself: a large backdrop
+that reacts to focus, rows that scroll without stutter, and above all **Apple's
+player rather than a home-grown one**.
 
-C'est le parti pris central du projet : `AVPlayerViewController`, avec ses points
-d'extension officiels. On y gagne la barre de transport système, Picture in Picture,
-AirPlay, le panneau Now Playing, les sous-titres et la sélection audio — tout ce
-qu'aucune implémentation maison n'égalerait vraiment.
+That is the project's central bet: `AVPlayerViewController`, driven through its
+official extension points. It buys the system transport bar, Picture in Picture,
+AirPlay, the Now Playing panel, subtitles and audio track selection — everything no
+custom implementation would truly match.
 
-## Ce que ça fait
+## What it does
 
-- **Accueil** — grand visuel qui suit le focus, reprises de lecture, prochains
-  épisodes, ajouts récents, favoris, collections, et des rangées par genre déduites
-  de votre médiathèque
-- **Lecteur** — saut de générique, chapitres, enchaînement d'épisode avec compte à
-  rebours, panneaux d'information au glissement vers le bas, Picture in Picture,
-  reprise à la seconde près
-- **Bibliothèques** — grille avec tri et filtres, fiches de séries saison par saison,
-  collections, distribution cliquable
-- **Étagère du haut** — reprises et prochains épisodes directement sur l'écran
-  d'accueil du système, avec liens profonds vers la lecture ou la fiche
-- **Connexion rapide** — le code s'affiche à l'écran et se valide depuis un téléphone,
-  plutôt que de taper un mot de passe à la télécommande
-- **Accessibilité** — VoiceOver, Texte plus grand, Texte en gras, Augmenter le
-  contraste et Réduire les animations
+- **Home** — a full-frame backdrop that follows focus, resume playback, next up,
+  recently added, favourites, collections, and genre rows inferred from your library
+- **Player** — skip intro, chapters, next-episode hand-off with a countdown,
+  swipe-down info panels, Picture in Picture, resume to the second
+- **Libraries** — grid with sorting and filters, series pages season by season,
+  collections, tappable cast
+- **Top Shelf** — resume and next up right on the system home screen, deep-linking
+  straight to playback or to the item page
+- **Quick Connect** — a code appears on screen and is approved from your phone,
+  instead of typing a password with the remote
+- **Accessibility** — VoiceOver, Larger Text, Bold Text, Increase Contrast and
+  Reduce Motion
 
-## Ce que ça ne fait pas
+## What it does not do
 
-Autant le dire franchement :
+Worth saying plainly:
 
-- **Pas de lecture directe des fichiers Matroska.** AVFoundation ne lit pas le MKV.
-  Le serveur le **remuxe** à la volée (le conteneur change, ni l'image ni le son ne
-  sont retouchés) — quelques pour cent de processeur, pas un réencodage. Un client
-  qui embarque son propre décodeur, comme Infuse, n'a pas cette contrainte ; il perd
-  en échange l'intégration système.
-- **Pas de gestion du serveur.** Ni utilisateurs, ni tâches planifiées, ni greffons.
-- **Pas de musique, de livres ni de télévision en direct.** Films et séries.
-- **Pas de téléchargement hors ligne.**
+- **No direct play of Matroska files.** AVFoundation cannot read MKV. The server
+  **remuxes** on the fly — the container changes, neither picture nor sound is
+  touched — which costs a few percent of CPU, not a re-encode. A client shipping its
+  own decoder, such as Infuse, does not have this constraint; it gives up system
+  integration in exchange.
+- **No server administration.** No users, no scheduled tasks, no plugins.
+- **No music, books or live TV.** Movies and shows.
+- **No offline downloads.**
 
 ## Installation
 
-Aucune version binaire n'est distribuée pour l'instant : il faut compiler.
+No binary is distributed yet — you build it yourself.
 
-### Ce qu'il vous faut
+### Requirements
 
-- macOS avec **Xcode 26** ou plus récent
+- macOS with **Xcode 26** or newer
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
-- Un serveur **Jellyfin 10.10+** joignable depuis l'Apple TV
-- Pour installer sur un vrai Apple TV : un compte développeur Apple, même gratuit
+- A **Jellyfin 10.10+** server reachable from the Apple TV
+- To install on real hardware: an Apple developer account, free tier is enough
 
-### Compiler
+### Build
 
 ```bash
 git clone https://github.com/McSon2/Sofafin.git
@@ -79,87 +79,88 @@ xcodegen generate
 open Sofafin.xcodeproj
 ```
 
-Le projet Xcode est **généré** depuis `project.yml` : ne le modifiez pas à la main,
-il est écrasé. Relancez `xcodegen generate` après chaque ajout de fichier.
+The Xcode project is **generated** from `project.yml`: never edit it by hand, it
+gets overwritten. Re-run `xcodegen generate` after adding any file.
 
-Le simulateur fonctionne sans signature. Pour une installation sur un appareil réel,
-déclarez votre identifiant d'équipe **sans le versionner** :
+The simulator runs unsigned. To install on a real device, declare your team
+identifier **without committing it**:
 
 ```bash
-echo 'DEVELOPMENT_TEAM = VOTREEQUIPE' > Signing.local.xcconfig
+echo 'DEVELOPMENT_TEAM = YOURTEAMID' > Signing.local.xcconfig
 xcodegen generate
 ```
 
-### Première connexion
+### First connection
 
-Au lancement, saisissez l'adresse de votre serveur (`192.168.1.10:8096`, ou un nom
-de domaine). Le protocole et le port sont devinés si vous les omettez. Puis
-choisissez la connexion rapide — le code affiché se valide depuis Jellyfin sur un
-autre appareil, dans **Profil → Connexion rapide**.
+On launch, enter your server address (`192.168.1.10:8096`, or a hostname). Scheme
+and port are guessed if you leave them out. Then use Quick Connect — the code shown
+on screen is approved from Jellyfin on another device, under
+**Profile → Quick Connect**.
 
-## Réglage du serveur, à connaître
+## A server setting worth knowing
 
-Si un film **HDR ou Dolby Vision** refuse de démarrer, ou si votre serveur chauffe
-alors qu'il devrait seulement remuxer, regardez la conversion HDR → SDR de Jellyfin
-(*tone mapping*, dans Lecture → Transcodage) :
+If an **HDR or Dolby Vision** movie refuses to start, or your server runs hot when
+it should merely be remuxing, look at Jellyfin's HDR → SDR conversion
+(*tone mapping*, under Playback → Transcoding):
 
-- elle **interdit la copie du flux vidéo** et impose un réencodage complet, coûteux
-  sur une petite machine ;
-- sa variante OpenCL exige un environnement d'exécution que beaucoup d'installations
-  n'ont pas, auquel cas ffmpeg s'arrête avant la première image et chaque segment
-  répond `HTTP 500`.
+- it **forbids copying the video stream** and forces a full re-encode, expensive on
+  a small machine;
+- its OpenCL variant needs a runtime many installations do not have, in which case
+  ffmpeg dies before the first frame and every segment answers `HTTP 500`.
 
-L'Apple TV 4K affiche nativement HDR10, HLG et Dolby Vision : **la désactiver donne
-une meilleure image et une machine au repos.**
+Apple TV 4K displays HDR10, HLG and Dolby Vision natively: **turning it off gives a
+better picture and an idle machine.**
 
 ## Architecture
 
 ```
-Packages/JellyfinKit/     cœur partagé, sans dépendance à l'interface
-  JellyfinClient          client HTTP, autorisation, décodage
-  Endpoints+*             authentification, bibliothèque, images
-  Playback                profil d'appareil, négociation, rapports de session
-  CredentialStore         session persistée dans le groupe d'applications
-  DeepLink                sofafin://play/<id> et sofafin://item/<id>
+Packages/JellyfinKit/     shared core, no UI dependency
+  JellyfinClient          HTTP client, authorization, decoding
+  Endpoints+*             authentication, library, images
+  Playback                device profile, negotiation, session reporting
+  CredentialStore         session persisted in the app group
+  DeepLink                sofafin://play/<id> and sofafin://item/<id>
 
 Apps/tvOS/Sources/
-  AppSession              état global : phase d'authentification, client, bibliothèques
-  Design/                 jetons, surfaces de verre, vignettes, rangées, accessibilité
+  AppSession              global state: auth phase, client, libraries
+  Design/                 tokens, glass surfaces, cards, rows, accessibility
   Features/               Onboarding, Home, Detail, Library, Search, Settings, Player
 
-Apps/TopShelf/            extension de l'étagère du haut (processus séparé)
+Apps/TopShelf/            Top Shelf extension (separate process)
 ```
 
-Toute la logique vit dans un paquet Swift sans interface, partagé avec l'extension
-et déjà multiplateforme : **un portage macOS ne demanderait de réécrire que les vues.**
+All logic lives in a UI-free Swift package, shared with the extension and already
+cross-platform: **a macOS port would only require rewriting the views.**
 
-`docs/NOTES-PLATEFORME.md` documente les décisions structurantes et les pièges de la
-plateforme déjà payés — lecture recommandée avant de toucher au lecteur.
+`docs/NOTES-PLATEFORME.md` (in French) documents the structural decisions and the
+platform traps already paid for — recommended reading before touching the player.
 
-## Contribuer
+## Contributing
 
-Les contributions sont bienvenues. Lisez [CONTRIBUTING.md](CONTRIBUTING.md) : il
-décrit la mise en route, les conventions du projet, et les quelques règles tvOS
-qu'il ne faut pas défaire par inadvertance.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md): it covers
+getting started, the project's conventions, and the few tvOS rules that must not be
+undone by accident.
 
-Le plus utile en ce moment :
+Most useful right now:
 
-- **Portage macOS** — `JellyfinKit` est prêt, seules les vues manquent
-- **Sous-titres externes en lecture directe**
-- **Traductions** — l'interface est aujourd'hui en français uniquement
-- **Tests sur des médiathèques variées** — les codecs exotiques sont la principale
-  source de surprises
+- **macOS port** — `JellyfinKit` is ready, only the views are missing
+- **External subtitles in direct play**
+- **Translations** — the interface ships in English and French
+- **Testing against varied libraries** — exotic codecs are the main source of
+  surprises
 
-## Vie privée
+## Privacy
 
-L'application ne parle **qu'au serveur que vous désignez**. Aucune analytique, aucun
-traceur, aucun service tiers, aucune donnée qui sort de votre réseau. Le jeton de
-session — révocable depuis Jellyfin, jamais votre mot de passe — est conservé
-localement pour vous éviter de vous reconnecter.
+The app talks **only to the server you point it at**. No analytics, no trackers, no
+third-party services, no data leaving your network. The session token — revocable
+from Jellyfin, never your password — is kept locally so you do not have to sign in
+again.
 
-## Licence
+[Full privacy policy](https://maximesaltet.com/sofafin/privacy)
+
+## License
 
 [MIT](LICENSE).
 
-Ce projet n'est pas affilié au projet Jellyfin. Jellyfin est une marque de ses
-propriétaires respectifs.
+This project is not affiliated with the Jellyfin project. Jellyfin is a trademark of
+its respective owners.
