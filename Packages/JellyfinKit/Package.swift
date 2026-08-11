@@ -15,6 +15,11 @@ let package = Package(
             name: "JellyfinKit",
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
+        .testTarget(
+            name: "JellyfinKitTests",
+            dependencies: ["JellyfinKit"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
         )
     ]
 )
