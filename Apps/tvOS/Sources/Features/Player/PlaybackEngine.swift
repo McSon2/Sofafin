@@ -68,6 +68,11 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
     /// serveur pour leurs vignettes.
     private(set) var client: JellyfinClient?
 
+    /// Retenu pour toute la durée de vie du moteur : `AVAssetResourceLoader` ne
+    /// garde qu'une référence faible sur son délégué, et un manifeste qui ne
+    /// répond plus fige la lecture sans rien dire.
+    private let manifestRewriter = PlaybackManifestRewriter()
+
     private var ticker: Any?
     private var statusObserver: NSKeyValueObservation?
     private var endObserver: NSObjectProtocol?
@@ -215,21 +220,20 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         hasStopped = false
         hasStartedPlaying = false
 
-        let playerItem = AVPlayerItem(asset: AVURLAsset(url: plan.url))
+        // Le manifeste d'un film HDR propose trois variantes de même débit, dont
+        // deux replis que le serveur ne peut produire qu'en réencodant l'image.
+        // `PlaybackManifestRewriter` ne lui en laisse qu'une : celle qui se
+        // recopie. Exprimer une préférence ne suffisait pas — un film HDR10+ fait
+        // déclarer sa bonne variante inéligible, et le lecteur se rabat.
+        let asset = plan.url.pathExtension == "m3u8"
+            ? manifestRewriter.asset(for: plan.url)
+            : AVURLAsset(url: plan.url)
+        let playerItem = AVPlayerItem(asset: asset)
         playerItem.externalMetadata = Self.metadata(for: full)
         // Pas de `navigationMarkerGroups` : voir `PlaybackEngine+Decorations`.
 
-        // Le manifeste d'un film HDR contient trois variantes de même débit : la
-        // première conserve la plage d'origine et permet au serveur de recopier le
-        // flux ; les deux suivantes sont des replis convertis en SDR, qu'il ne peut
-        // produire qu'en réencodant. Depuis tvOS 13, le lecteur ne prend plus la
-        // première venue mais celle qui lui promet le meilleur démarrage — et à
-        // débit égal, il tombe sur un repli, donc sur un réencodage 4K que le
-        // serveur ne tient pas.
-        //
-        // Cette propriété rétablit le comportement d'avant : suivre l'ordre du
-        // manifeste, que le serveur a rempli en connaissance de cause. Elle doit
-        // être posée avant que le choix n'ait lieu, donc avant `replaceCurrentItem`.
+        // Ceinture et bretelles : le manifeste réécrit n'a plus qu'une variante,
+        // mais un serveur d'une autre version pourrait en servir plusieurs.
         playerItem.startsOnFirstEligibleVariant = true
 
         player.replaceCurrentItem(with: playerItem)
