@@ -1,0 +1,36 @@
+name: Anomalie
+description: Un comportement inattendu ailleurs que dans le lecteur
+labels: ["anomalie"]
+body:
+  - type: textarea
+    id: attendu
+    attributes:
+      label: Ce qui était attendu, et ce qui se produit
+    validations:
+      required: true
+  - type: textarea
+    id: reproduire
+    attributes:
+      label: Comment le reproduire
+      placeholder: |
+        1. Ouvrir …
+        2. Déplacer le focus vers …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: journal
+    attributes:
+      label: Journal, si l'application s'est arrêtée
+      description: |
+        Un arrêt sans message dans le journal, sur un fil autre que le premier,
+        désigne presque toujours une violation d'isolation d'acteur. Le rapport
+        d'incident de Xcode est alors plus parlant que la console.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "Sofafin 1.0.0 · tvOS 26.1 · Jellyfin 10.11"
+    validations:
+      required: true

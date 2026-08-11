@@ -183,7 +183,7 @@ public enum CredentialStore {
             baseURL: stored.serverURL,
             identity: ClientIdentity(
                 name: clientName,
-                version: "0.1.0",
+                version: "1.0.0",
                 deviceName: deviceName,
                 deviceId: stored.deviceId
             ),

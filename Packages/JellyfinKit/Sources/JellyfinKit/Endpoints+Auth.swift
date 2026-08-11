@@ -24,7 +24,7 @@ public extension JellyfinClient {
             candidates = ["https://\(trimmed)", "http://\(trimmed)", "http://\(trimmed):8096"]
         }
 
-        let identity = ClientIdentity(name: "Sofafin", version: "0.1.0", deviceName: "probe", deviceId: "probe")
+        let identity = ClientIdentity(name: "Sofafin", version: "1.0.0", deviceName: "probe", deviceId: "probe")
         for candidate in candidates {
             guard var url = URL(string: candidate) else { continue }
             if url.path.hasSuffix("/") {

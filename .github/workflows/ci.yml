@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# Une contribution extérieure ne doit jamais pouvoir écrire dans le dépôt : la
+# vérification n'a besoin que de lire le code qu'elle compile.
+permissions:
+  contents: read
+
 concurrency:
   # Une nouvelle poussée annule la vérification en cours sur la même branche :
   # seul le dernier état compte, et les exécuteurs macOS sont une ressource rare.
@@ -60,3 +65,52 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             clean build
+
+  # Ce que la compilation ne dit pas : une chaîne visible oubliée en français,
+  # ou une donnée personnelle réintroduite dans un fichier suivi.
+  garde-fous:
+    name: Garde-fous du dépôt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aucune donnée personnelle versionnée
+        run: |
+          if git grep -nIE '(192\.168\.[0-9]+\.[0-9]+|DEVELOPMENT_TEAM *= *[A-Z0-9]{10})' -- . ':!*.md'; then
+            echo "::error::Une adresse privée ou un identifiant d'équipe a été versionné."
+            exit 1
+          fi
+
+      - name: Aucune chaîne visible non traduite
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          keys = set()
+          for c in ["Apps/tvOS/Resources/Localizable.xcstrings",
+                    "Packages/JellyfinKit/Sources/JellyfinKit/Resources/Localizable.xcstrings"]:
+              keys |= set(json.loads(pathlib.Path(c).read_text())["strings"])
+          # Un littéral français affiché doit être soit une clé connue, soit
+          # enveloppé dans une forme que le système sait traduire.
+          wrapper = re.compile(r'(\bL\(|Text\(|Label\(|Button\(|TextField\(|SecureField\('
+                               r'|localized:|title:|titled:|message:|prompt:|separator:'
+                               r'|accessibility(Label|Hint|Value)\()\s*$')
+          french = re.compile(r'[éèêëàâùûôîïçÉÈÀÇ]')
+          logging = re.compile(r'jellyfinLog\.|privacy:\s*\.|preconditionFailure')
+          bad = []
+          for f in list(pathlib.Path("Apps").rglob("*.swift")) + list(pathlib.Path("Packages").rglob("*.swift")):
+              lines = f.read_text().splitlines()
+              for i, line in enumerate(lines, 1):
+                  if line.strip().startswith(("//", "///", "*")): continue
+                  if logging.search("\n".join(lines[max(0, i-4):i+1])): continue
+                  for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', line):
+                      s = m.group(1)
+                      if len(s) < 3 or not french.search(s): continue
+                      if s in keys or wrapper.search(line[:m.start()]): continue
+                      bad.append(f"{f}:{i}  {s[:60]!r}")
+          if bad:
+              print("::error::Chaînes visibles non traduites :")
+              for b in bad: print("  ", b)
+              sys.exit(1)
+          print("Toutes les chaînes visibles sont traduites.")
+          PY
+

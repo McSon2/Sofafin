@@ -1,0 +1,44 @@
+name: Problème de lecture
+description: Un titre ne démarre pas, se fige, ou se lit mal
+labels: ["lecture"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        La cause la plus fréquente est côté serveur, pas côté application.
+        **Avant d'ouvrir un ticket**, vérifiez la conversion HDR → SDR de Jellyfin
+        (Lecture → Transcodage) : elle interdit la copie du flux et fait échouer
+        les fichiers HDR sur beaucoup d'installations.
+  - type: textarea
+    id: journal
+    attributes:
+      label: Lignes « LECTURE · » du journal
+      description: |
+        Elles donnent le mode négocié, l'URL du flux et les codes HTTP des
+        segments refusés — c'est ce qui permet de trancher entre le serveur et
+        l'application.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: fichier
+    attributes:
+      label: Caractéristiques du fichier
+      description: Conteneur, codec vidéo, profil, plage HDR, pistes audio et sous-titres — visibles dans sa fiche côté serveur.
+      placeholder: "mkv · HEVC Main 10 · HDR10+ · AC3 5.1 · sous-titres PGS"
+    validations:
+      required: true
+  - type: input
+    id: jellyfin
+    attributes:
+      label: Version de Jellyfin
+      placeholder: "10.11.11"
+    validations:
+      required: true
+  - type: input
+    id: tvos
+    attributes:
+      label: Version de tvOS et modèle d'Apple TV
+      placeholder: "tvOS 26.1 · Apple TV 4K (3ᵉ génération)"
+    validations:
+      required: true

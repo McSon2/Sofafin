@@ -1,0 +1,22 @@
+name: Proposition
+description: Une idée d'évolution
+labels: ["proposition"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Certains sujets sont hors périmètre par choix : l'administration du
+        serveur, la musique, les livres, la télévision en direct, et le
+        remplacement d'AVKit par un lecteur tiers — dont dépend toute
+        l'intégration système. Voir CONTRIBUTING.md.
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Le besoin, avant la solution
+      description: Ce que vous cherchez à faire et ce qui vous en empêche aujourd'hui.
+    validations:
+      required: true
+  - type: textarea
+    id: piste
+    attributes:
+      label: Une piste, éventuellement
