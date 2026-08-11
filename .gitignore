@@ -26,3 +26,7 @@ Packages/*/Package.resolved
 
 # Signature : chacun la sienne, jamais dans le dépôt
 Signing.local.xcconfig
+
+# Produits de distribution (recréés par xcodebuild)
+*.xcarchive
+*.ipa
