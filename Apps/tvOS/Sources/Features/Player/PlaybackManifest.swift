@@ -134,24 +134,47 @@ final class PlaybackManifestServer: @unchecked Sendable {
 
     private func accept(_ connection: NWConnection) {
         connection.start(queue: queue)
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, _, _, _ in
-            guard let self, let data, let request = String(data: data, encoding: .utf8) else {
+        serve(connection, pending: Data())
+    }
+
+    /// Sert les requêtes d'une connexion, l'une après l'autre.
+    ///
+    /// Ne lire qu'une fois suffisait à tout faire échouer : le lecteur ouvre une
+    /// connexion, demande la playlist, puis en redemande sur la **même**
+    /// connexion. Sans deuxième lecture, il attend indéfiniment une réponse qui
+    /// ne vient pas, et l'élément n'est jamais ni prêt ni en échec.
+    private func serve(_ connection: NWConnection, pending: Data) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 16384) { [weak self] data, _, isComplete, error in
+            guard let self, error == nil else {
                 connection.cancel()
                 return
             }
-            let response = self.response(to: request)
-            connection.send(content: response, completion: .contentProcessed { _ in
+            var buffer = pending
+            if let data { buffer.append(data) }
+
+            // Une requête peut arriver en plusieurs morceaux : on attend sa fin
+            // d'en-têtes avant de répondre.
+            let terminator = Data("\r\n\r\n".utf8)
+            while let end = buffer.range(of: terminator) {
+                let head = String(decoding: buffer[..<end.lowerBound], as: UTF8.self)
+                buffer.removeSubrange(..<end.upperBound)
+                connection.send(content: self.response(to: head), completion: .idempotent)
+            }
+
+            if isComplete {
                 connection.cancel()
-            })
+            } else {
+                self.serve(connection, pending: buffer)
+            }
         }
     }
 
     /// Répond à une requête HTTP réduite à sa plus simple expression : le seul
     /// client est le lecteur du système, sur la boucle locale.
-    private func response(to request: String) -> Data {
-        let path = request
-            .components(separatedBy: "\r\n").first?
-            .components(separatedBy: " ").dropFirst().first ?? ""
+    private func response(to head: String) -> Data {
+        let request = head.components(separatedBy: "\r\n").first?.components(separatedBy: " ") ?? []
+        let method = request.first ?? "GET"
+        let path = request.dropFirst().first ?? ""
 
         guard let document = documents[String(path)] else {
             return Data("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n".utf8)
@@ -161,11 +184,12 @@ final class PlaybackManifestServer: @unchecked Sendable {
         HTTP/1.1 200 OK\r
         Content-Type: application/vnd.apple.mpegurl\r
         Content-Length: \(document.count)\r
+        Accept-Ranges: none\r
         Cache-Control: no-cache\r
-        Connection: close\r
         \r\n
         """.utf8)
-        response.append(document)
+        // Une réponse à HEAD porte les mêmes en-têtes et pas de corps.
+        if method != "HEAD" { response.append(document) }
         return response
     }
 }
