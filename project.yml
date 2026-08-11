@@ -55,6 +55,11 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UIUserInterfaceStyle: Dark
+        # Sofafin ne chiffre rien lui-même : il parle HTTP ou HTTPS au serveur
+        # que l'utilisateur désigne. Sans cette clé, chaque envoi de build
+        # attend une réponse manuelle au questionnaire de conformité, et la
+        # version reste bloquée en « en attente » sans le dire.
+        ITSAppUsesNonExemptEncryption: false
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
           NSAllowsArbitraryLoads: true

@@ -90,6 +90,18 @@ jobs:
             echo "::error::Un identifiant d'équipe a été versionné."
             exit 1
           fi
+          # Le compte de démonstration remis à la revue d'Apple n'existe que
+          # dans App Store Connect. Les notes de publication sont le seul
+          # endroit où la tentation de le recopier se présente — et ce dépôt
+          # est public.
+          if git grep -nIE '(demo[-_]?account[-_]?(password|name)|contact-phone)' -- . ':!.github/workflows/*'; then
+            echo "::error::Des identifiants de revue semblent versionnés."
+            exit 1
+          fi
+          if git grep -nIE '\+[0-9]{10,14}\b' -- . ':!.github/workflows/*'; then
+            echo "::error::Un numéro de téléphone a été versionné."
+            exit 1
+          fi
           echo "Aucune donnée personnelle dans les fichiers suivis."
 
       - name: Aucune chaîne visible non traduite

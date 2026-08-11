@@ -131,42 +131,56 @@ jellyfin,media,server,movies,shows,streaming,nas,library,plex,emby,home cinema
 ## Classification d'âge
 
 Sofafin **n'a pas de contenu propre** : il affiche ce que contient le serveur de
-l'utilisateur, dont ni Apple ni nous ne savons rien. Le questionnaire doit être
-rempli en conséquence — « Contenu web sans restriction » **oui**, ce qui conduit
-à **17+**. C'est la position des autres clients de médiathèque personnelle, et la
-sous-déclarer expose à un rejet ou à un retrait ultérieur.
+l'utilisateur, dont ni Apple ni nous ne savons rien. Le questionnaire est rempli
+en conséquence : tout à « aucun », sauf **contenu généré par l'utilisateur** et
+**accès web sans restriction**, tous deux à « oui ». C'est la position des autres
+clients de médiathèque personnelle ; la sous-déclarer expose à un rejet ou à un
+retrait ultérieur.
+
+---
+
+## Ce qui ne passe pas par l'API
+
+Deux réglages ne sont accessibles que dans l'interface d'App Store Connect —
+l'API publique ne les expose pas, et les contourner passerait par des points
+d'accès privés qui mettent le compte en jeu :
+
+- **Disponibilité** (Tarifs et disponibilité → Disponibilité) : il faut créer
+  l'enregistrement initial en cochant les territoires. Le tarif, lui, est déjà
+  posé à « gratuit ».
+- **Confidentialité de l'app** (les étiquettes de collecte de données) : à
+  déclarer comme **aucune donnée collectée**. Sofafin ne parle qu'au serveur
+  saisi par l'utilisateur, sans analytique ni service tiers.
 
 ---
 
 ## Notes pour la revue
 
-À coller dans « App Review Information → Notes ». Sans compte de démonstration,
-un examinateur ne peut rien voir : c'est la première cause de rejet de ce type
-d'application.
+Saisies dans « App Review Information ». Sans compte de démonstration, un
+examinateur ne voit qu'un écran de connexion : c'est la première cause de rejet
+de ce type d'application, au titre de la règle 2.1.
 
-> Sofafin is a client for Jellyfin, a self-hosted media server. The app has no
-> content of its own and no back end: it connects to a server the user provides.
->
-> A demo server is available for review:
->   Address:  <à compléter>
->   Username: <à compléter>
->   Password: <à compléter>
->
-> Sign-in screen → enter the address above → "Sign in with your account" →
-> username and password. Quick Connect is also offered but requires a second
-> device, so please use the account fields.
->
-> ABOUT App Transport Security
-> The app declares NSAllowsArbitraryLoads. Self-hosted media servers are
-> overwhelmingly reached over plain HTTP on a local network (e.g. 192.168.x.x:8096)
-> and cannot present a valid TLS certificate for a private IP address. The
-> exception is required for the app to function at all. No traffic goes anywhere
-> other than the server the user explicitly enters. NSAllowsLocalNetworking is
-> also declared.
+Ce dépôt est public : **les identifiants ne sont écrits nulle part ici.** Ils
+sont saisis directement sur la version, dans App Store Connect, et n'existent
+qu'à cet endroit.
 
-**Il faut un serveur de démonstration accessible depuis l'extérieur** pendant la
-revue, avec quelques titres. Sans lui, l'examinateur voit un écran de connexion
-et rien d'autre — rejet quasi certain au titre de la règle 2.1.
+| Champ | Où le trouver |
+|---|---|
+| Contact | Coordonnées du compte développeur |
+| Compte de démonstration requis | oui |
+| Identifiant et mot de passe | App Store Connect → App Review Information |
+| Serveur à saisir dans l'application | l'instance de démonstration, pas le serveur personnel |
+
+Le compte de démonstration n'est pas administrateur et ne voit qu'une
+bibliothèque dédiée : l'examinateur n'a accès à aucun média personnel. Ne pas le
+supprimer tant que la version n'est pas approuvée — un identifiant qui ne
+fonctionne plus pendant la revue vaut un rejet.
+
+Les notes elles-mêmes expliquent le parcours de connexion, la raison de
+`NSAllowsArbitraryLoads` (un serveur auto-hébergé sur IP privée ne peut pas
+présenter de certificat TLS valide) et la logique de la classification d'âge.
+Elles sont enregistrées sur la version ; ce fichier n'en garde pas de copie, qui
+divergerait.
 
 ---
 
