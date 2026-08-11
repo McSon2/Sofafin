@@ -314,6 +314,42 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         return seconds.isFinite ? seconds : lastPosition
     }
 
+    // MARK: Déplacement dans le film
+
+    /// Redemande un flux au serveur quand l'utilisateur saute hors de ce qui est
+    /// déjà produit.
+    ///
+    /// La playlist couvre le film entier, mais le serveur ne l'a pas produit :
+    /// il recopie le flux au fil de la lecture, en avançant. Revenir en arrière
+    /// lui demande un passage qu'il a dépassé et qu'il ne reprendra pas — mesuré
+    /// sur un retour de deux minutes : la lecture ne repart pas du tout, et
+    /// l'attente est sans fin plutôt que longue.
+    ///
+    /// Repartir d'un flux qui **commence** à la position voulue coûte le prix
+    /// d'un démarrage, environ une seconde. C'est ce que fait le client web de
+    /// Jellyfin, et ce que signifie `TranscodeSeekInfo` dans le profil.
+    ///
+    /// Un saut à l'intérieur de ce qui est chargé ne passe pas par là : le
+    /// lecteur s'en sort seul, instantanément.
+    func playerViewController(
+        _ playerViewController: AVPlayerViewController,
+        willResumePlaybackAfterUserNavigatedFrom oldTime: CMTime,
+        to targetTime: CMTime
+    ) {
+        guard targetTime.seconds.isFinite, let item = player.currentItem,
+              let current = context?.item else { return }
+
+        let alreadyLoaded = item.loadedTimeRanges
+            .map(\.timeRangeValue)
+            .contains { CMTimeRangeContainsTime($0, time: targetTime) }
+        guard !alreadyLoaded else { return }
+
+        jellyfinLog.debug(
+            "LECTURE · saut hors du flux produit vers \(targetTime.seconds.timecode, privacy: .public) · nouveau flux demandé"
+        )
+        play(current, startTime: targetTime.seconds)
+    }
+
     // MARK: Observation
 
     private func attachObservers(to playerItem: AVPlayerItem) {
