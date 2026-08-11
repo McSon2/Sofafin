@@ -30,9 +30,17 @@ public extension JellyfinClient {
         return try? url(path: "Items/\(itemId)/Images/\(type.rawValue)", query: query)
     }
 
+    // MARK: Résolutions par défaut
+    //
+    // Une Apple TV 4K rend l'interface à l'échelle 2 : une affiche posée sur
+    // 280 points occupe 560 pixels, et 610 une fois agrandie par le focus. Les
+    // valeurs ci-dessous couvrent cet état agrandi — c'est celui que l'utilisateur
+    // regarde. En demander moins revient à faire étirer l'image par le lecteur, ce
+    // qui se voit immédiatement sur une grande dalle.
+
     /// Affiche du portrait : le poster de l'item, en retombant sur celui de la série
     /// pour un épisode (qui n'a le plus souvent qu'une vignette d'écran).
-    func posterURL(for item: MediaItem, maxWidth: Int = 500) -> URL? {
+    func posterURL(for item: MediaItem, maxWidth: Int = 700) -> URL? {
         if let tag = item.imageTags?["Primary"] {
             return imageURL(itemId: item.id, type: .primary, tag: tag, maxWidth: maxWidth)
         }
@@ -43,7 +51,7 @@ public extension JellyfinClient {
     }
 
     /// Affiche du paysage : vignette d'épisode, sinon backdrop, sinon poster.
-    func thumbURL(for item: MediaItem, maxWidth: Int = 780) -> URL? {
+    func thumbURL(for item: MediaItem, maxWidth: Int = 1100) -> URL? {
         if item.type == .episode, let tag = item.imageTags?["Primary"] {
             return imageURL(itemId: item.id, type: .primary, tag: tag, maxWidth: maxWidth)
         }
@@ -57,7 +65,12 @@ public extension JellyfinClient {
     }
 
     /// Grande image de fond, celle qui remplit le billboard d'accueil.
-    func backdropURL(for item: MediaItem, maxWidth: Int = 1920) -> URL? {
+    ///
+    /// 2560 et non 3840 : l'image occupe toute la largeur d'une dalle 4K, mais elle
+    /// passe sous un voile sombre et ne porte aucun détail fin. Réclamer la pleine
+    /// résolution triplerait le poids d'une image que le billboard remplace à
+    /// chaque déplacement du focus.
+    func backdropURL(for item: MediaItem, maxWidth: Int = 2560) -> URL? {
         if let tag = item.backdropImageTags?.first {
             return imageURL(itemId: item.id, type: .backdrop, tag: tag, maxWidth: maxWidth)
         }
@@ -72,7 +85,8 @@ public extension JellyfinClient {
     }
 
     /// Logo du titre — c'est lui qui donne au billboard son allure de Netflix.
-    func logoURL(for item: MediaItem, maxWidth: Int = 640) -> URL? {
+    /// Posé sur 620 points, il en réclame 1240 en pixels.
+    func logoURL(for item: MediaItem, maxWidth: Int = 1280) -> URL? {
         if let tag = item.imageTags?["Logo"] {
             return imageURL(itemId: item.id, type: .logo, tag: tag, maxWidth: maxWidth)
         }
@@ -82,7 +96,7 @@ public extension JellyfinClient {
         return nil
     }
 
-    func personImageURL(for person: Person, maxWidth: Int = 300) -> URL? {
+    func personImageURL(for person: Person, maxWidth: Int = 400) -> URL? {
         guard let id = person.id, let tag = person.primaryImageTag else { return nil }
         return imageURL(itemId: id, type: .primary, tag: tag, maxWidth: maxWidth)
     }

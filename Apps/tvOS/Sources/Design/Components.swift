@@ -9,6 +9,17 @@ struct RemoteImage: View {
     let url: URL?
     var contentMode: ContentMode = .fill
 
+    /// L'initialiseur n'est pas décoratif : c'est le seul point du cycle de vie
+    /// d'une vue qu'une pile paresseuse exécute **pendant son préchargement**,
+    /// avant que la vignette n'entre à l'écran. Y lancer la requête réseau, plutôt
+    /// que d'attendre l'apparition, est ce qui donne son avance au défilement.
+    /// Voir `ImagePrefetcher`.
+    init(url: URL?, contentMode: ContentMode = .fill) {
+        self.url = url
+        self.contentMode = contentMode
+        ImagePrefetcher.shared.prefetch(url)
+    }
+
     var body: some View {
         AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
             switch phase {
@@ -29,8 +40,11 @@ struct RemoteImage: View {
             endPoint: .bottomTrailing
         )
         .overlay {
+            // `medium` et non `light` : un glyphe maigre s'efface sur un
+            // téléviseur, où le flou de mouvement et la compression mangent les
+            // traits fins.
             Image(systemName: "film")
-                .font(.system(size: 44, weight: .light))
+                .font(Theme.Font.placeholderGlyph)
                 .foregroundStyle(Theme.Palette.tertiaryText)
         }
     }
@@ -172,7 +186,7 @@ struct SelectableChip: View {
                 .fixedSize(horizontal: true, vertical: false)
             if isSelected, let activeSymbol {
                 Image(systemName: activeSymbol)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(Theme.Font.badge)
             }
         }
         .font(Theme.Font.badge)
@@ -204,7 +218,7 @@ struct GlassMenu<Content: View>: View {
                 Text(value)
                 if let symbol {
                     Image(systemName: symbol)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(Theme.Font.badge)
                 }
             }
             .font(Theme.Font.badge)
@@ -212,6 +226,11 @@ struct GlassMenu<Content: View>: View {
             .fixedSize(horizontal: true, vertical: false)
         }
         .buttonStyle(.glass)
+        // Sans cela VoiceOver annonce « Trier par, Année, flèche vers le bas » en
+        // trois fragments, sans dire que le second est la valeur retenue.
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+        .accessibilityHint("Ouvre la liste des options")
     }
 }
 
@@ -248,6 +267,8 @@ struct ResumeProgressBar: View {
             }
         }
         .frame(height: 6)
+        // La progression est énoncée par la description de la vignette.
+        .accessibilityHidden(true)
     }
 }
 
@@ -268,7 +289,9 @@ struct PosterCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 RemoteImage(url: session.api.posterURL(for: item))
                     .frame(width: Theme.Metrics.posterWidth, height: Theme.Metrics.posterHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius, style: .continuous))
+                    // Remplace le simple `clipShape` : la découpe est désormais
+                    // appliquée après l'agrandissement de profondeur.
+                    .focusParallax(isFocused)
                     .overlay(alignment: .bottom) {
                         if let fraction = item.progressFraction {
                             ResumeProgressBar(fraction: fraction)
@@ -284,10 +307,17 @@ struct PosterCard: View {
                         }
                     }
 
+                // `reservesSpace` et non un simple `lineLimit` : une pile
+                // horizontale paresseuse donne à toute la rangée la hauteur de sa
+                // **première** sous-vue. Une carte dont le titre manquerait, ou
+                // qu'on passerait un jour à deux lignes, imposerait donc sa
+                // hauteur aux autres — qui se retrouveraient rognées. Réserver la
+                // place rend la hauteur identique quel que soit le contenu, tout
+                // en suivant la taille de texte choisie par l'utilisateur.
                 Text(item.rowTitle)
                     .font(Theme.Font.cardTitle)
                     .foregroundStyle(Theme.Palette.primaryText)
-                    .lineLimit(1)
+                    .lineLimit(1, reservesSpace: true)
                 CardFooter(item: item)
             }
             .frame(width: Theme.Metrics.posterWidth, alignment: .leading)
@@ -300,6 +330,13 @@ struct PosterCard: View {
         .contextMenu {
             MediaCardMenu(item: item, onPlay: action, onOpenDetails: onOpenDetails)
         }
+        // La carte parle d'une seule voix : le titre tronqué, la barre de
+        // progression et le coin de couleur sont des fragments visuels dont
+        // l'énumération n'apprendrait rien. `accessibilityDescription` les dit en
+        // une phrase, dans l'ordre où ils comptent.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.accessibilityDescription)
+        .accessibilityHint(item.accessibilityActionHint)
     }
 }
 
@@ -319,7 +356,7 @@ struct LandscapeCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 RemoteImage(url: session.api.thumbURL(for: item))
                     .frame(width: Theme.Metrics.landscapeWidth, height: Theme.Metrics.landscapeHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.cornerRadius, style: .continuous))
+                    .focusParallax(isFocused)
                     .overlay(alignment: .bottom) {
                         if let fraction = item.progressFraction {
                             ResumeProgressBar(fraction: fraction)
@@ -335,10 +372,12 @@ struct LandscapeCard: View {
                         }
                     }
 
+                // Voir `PosterCard` : la hauteur de la rangée entière est celle de
+                // sa première carte.
                 Text(item.rowTitle)
                     .font(Theme.Font.cardTitle)
                     .foregroundStyle(Theme.Palette.primaryText)
-                    .lineLimit(1)
+                    .lineLimit(1, reservesSpace: true)
                 CardFooter(item: item)
             }
             .frame(width: Theme.Metrics.landscapeWidth, alignment: .leading)
@@ -351,6 +390,9 @@ struct LandscapeCard: View {
         .contextMenu {
             MediaCardMenu(item: item, onPlay: action, onOpenDetails: onOpenDetails)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.accessibilityDescription)
+        .accessibilityHint(item.accessibilityActionHint)
     }
 }
 
@@ -362,15 +404,18 @@ struct CardFooter: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(item.rowSubtitle ?? " ")
-                .lineLimit(1)
+            // L'espace insécable tenait lieu de réservation de place quand le
+            // sous-titre manque ; `reservesSpace` le dit au moteur de mise en page
+            // plutôt qu'au moteur de rendu.
+            Text(item.rowSubtitle ?? "")
+                .lineLimit(1, reservesSpace: true)
 
             Spacer(minLength: 8)
 
             if let rating = item.communityRating {
                 HStack(spacing: 5) {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 20))
+                        .font(Theme.Font.badge)
                         .foregroundStyle(.yellow)
                     Text(String(format: "%.1f", rating))
                 }
@@ -395,16 +440,19 @@ struct UnwatchedBadge: View {
         ZStack(alignment: .topTrailing) {
             Triangle()
                 .fill(Theme.Palette.accent)
-                .frame(width: 52, height: 52)
+                .frame(width: 60, height: 60)
 
             if let count, count > 0 {
                 Text("\(count)")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(Theme.Font.badge)
                     .foregroundStyle(.white)
                     .padding(.top, 6)
                     .padding(.trailing, 8)
             }
         }
+        // Le compte est déjà énoncé par la description de la vignette, dont ce coin
+        // est la traduction visuelle : le relire en ferait un doublon.
+        .accessibilityHidden(true)
     }
 }
 
@@ -439,6 +487,13 @@ struct MediaRow: View {
     var scrollTo: String?
     let onSelect: (MediaItem) -> Void
 
+    /// Position de la rangée. Remplace `ScrollViewReader` : celui-ci ne sait
+    /// désigner une cible qu'en résolvant les vues de la pile, ce qui suppose
+    /// qu'elles existent déjà. `ScrollPosition` s'exprime en identifiants, que le
+    /// conteneur sait rejoindre même quand la vignette visée n'a pas encore été
+    /// construite — le cas normal dans une pile paresseuse.
+    @State private var position = ScrollPosition()
+
     var body: some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 20) {
@@ -448,33 +503,37 @@ struct MediaRow: View {
                     .padding(.horizontal, Theme.Metrics.screenPadding)
 
                 ScrollView(.horizontal) {
-                    ScrollViewReader { proxy in
-                        LazyHStack(spacing: Theme.Metrics.cardSpacing) {
-                            ForEach(items) { item in
-                                switch layout {
-                                case .poster:
-                                    PosterCard(
-                                        item: item,
-                                        onFocus: onFocus,
-                                        onOpenDetails: onOpenDetails.map { open in { open(item) } }
-                                    ) { onSelect(item) }
-                                case .landscape:
-                                    LandscapeCard(
-                                        item: item,
-                                        onFocus: onFocus,
-                                        onOpenDetails: onOpenDetails.map { open in { open(item) } }
-                                    ) { onSelect(item) }
-                                }
+                    LazyHStack(spacing: Theme.Metrics.cardSpacing) {
+                        ForEach(items) { item in
+                            switch layout {
+                            case .poster:
+                                PosterCard(
+                                    item: item,
+                                    onFocus: onFocus,
+                                    onOpenDetails: onOpenDetails.map { open in { open(item) } }
+                                ) { onSelect(item) }
+                            case .landscape:
+                                LandscapeCard(
+                                    item: item,
+                                    onFocus: onFocus,
+                                    onOpenDetails: onOpenDetails.map { open in { open(item) } }
+                                ) { onSelect(item) }
                             }
                         }
-                        .padding(.horizontal, Theme.Metrics.screenPadding)
-                        // Sans cette marge, l'agrandissement au focus est rogné par le ScrollView.
-                        .padding(.vertical, 40)
-                        .onChange(of: scrollTo, initial: true) { _, target in
-                            guard let target else { return }
-                            proxy.scrollTo(target, anchor: .leading)
-                        }
                     }
+                    // Désigne la pile comme la couche dont les enfants sont des
+                    // cibles de défilement — sans quoi `scrollTo(id:)` n'a rien à
+                    // viser. À poser avant les marges : appliqué après, il ne
+                    // verrait plus qu'une vue unique au lieu de la rangée.
+                    .scrollTargetLayout()
+                    .padding(.horizontal, Theme.Metrics.screenPadding)
+                    // Sans cette marge, l'agrandissement au focus est rogné par le ScrollView.
+                    .padding(.vertical, 40)
+                }
+                .scrollPosition($position)
+                .onChange(of: scrollTo, initial: true) { _, target in
+                    guard let target else { return }
+                    position.scrollTo(id: target, anchor: .leading)
                 }
                 .scrollClipDisabled()
                 // Sans section de focus, quitter la rangée vers le haut ne trouve
@@ -508,9 +567,11 @@ struct MetadataLine: View {
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 5)
-                            .strokeBorder(Theme.Palette.secondaryText, lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Theme.Palette.secondaryText,
+                                          lineWidth: Theme.Metrics.hairline)
                     )
+                    .accessibilityLabel("Classification \(rating)")
             }
             if showRating, let community = item.communityRating {
                 HStack(spacing: 6) {
@@ -518,6 +579,8 @@ struct MetadataLine: View {
                         .foregroundStyle(.yellow)
                     Text(String(format: "%.1f", community))
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Noté \(String(format: "%.1f", community)) sur 10")
             }
         }
         .font(Theme.Font.caption)
@@ -534,19 +597,31 @@ struct LoadingView: View {
             .tint(.white)
             .scaleEffect(1.6)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityLabel("Chargement en cours")
     }
 }
 
+/// Écran de repli : rien à montrer, ou rien reçu.
+///
+/// Quand la cause est une panne et non un vide réel, l'écran porte le moyen d'en
+/// sortir. La télécommande Siri n'a pas de geste de rafraîchissement — pas de
+/// tirer-pour-recharger sur un téléviseur — donc l'action doit être un bouton
+/// visible, sans quoi l'utilisateur n'a d'autre recours que de quitter l'app.
 struct EmptyStateView: View {
     let icon: String
     let title: String
     var message: String?
+    var retryTitle: String = "Réessayer"
+    var onRetry: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 20) {
+            // `medium` au lieu de `thin` : les directives proscrivent le trait fin,
+            // qui ne survit pas à la distance de salon.
             Image(systemName: icon)
-                .font(.system(size: 72, weight: .thin))
+                .font(Theme.Font.emptyStateGlyph)
                 .foregroundStyle(Theme.Palette.tertiaryText)
+                .accessibilityHidden(true)
             Text(title)
                 .font(Theme.Font.sectionTitle)
                 .foregroundStyle(Theme.Palette.primaryText)
@@ -555,7 +630,17 @@ struct EmptyStateView: View {
                     .font(Theme.Font.body)
                     .foregroundStyle(Theme.Palette.secondaryText)
                     .multilineTextAlignment(.center)
-                    .frame(maxWidth: 700)
+                    .frame(maxWidth: 900)
+            }
+            if let onRetry {
+                Button(action: onRetry) {
+                    Label(retryTitle, systemImage: "arrow.clockwise")
+                        .font(Theme.Font.button)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.glassProminent)
+                .padding(.top, 16)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

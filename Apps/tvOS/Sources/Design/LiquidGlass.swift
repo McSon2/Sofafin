@@ -26,9 +26,12 @@ struct LiquidGlassBackground: ViewModifier {
                 shape
                     .strokeBorder(
                         LinearGradient.glassEdge,
-                        lineWidth: isHighlighted ? 2.5 : 1.2
+                        // Une arête de verre est censée être fine, mais en dessous
+                        // de 2 pt elle disparaît purement et simplement sur un
+                        // téléviseur : la surface perd alors son relief.
+                        lineWidth: isHighlighted ? 3 : Theme.Metrics.hairline
                     )
-                    .opacity(isHighlighted ? 1.0 : 0.7)
+                    .opacity(isHighlighted ? 1.0 : 0.8)
             }
             .clipShape(shape)
             .shadow(color: .black.opacity(0.45), radius: isHighlighted ? 26 : 14, y: isHighlighted ? 14 : 8)
@@ -59,7 +62,12 @@ extension View {
 /// s'éclaire et se détache par son ombre. Volontairement **sans contour** — une
 /// bordure tracée autour d'une carte suit mal ses coins, déborde sur le titre et
 /// alourdit l'écran ; ni tvOS ni les services de streaming n'en utilisent.
+///
+/// « Réduire les animations » supprime le ressort, **pas** la distinction elle-même :
+/// l'agrandissement et l'ombre sont le seul signal disant où l'on se trouve. Les
+/// effacer rendrait l'application inutilisable au lieu de la rendre plus calme.
 struct FocusLift: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isFocused: Bool
     var scale: CGFloat = Theme.Metrics.focusScale
 
@@ -69,7 +77,8 @@ struct FocusLift: ViewModifier {
             .shadow(color: .black.opacity(isFocused ? 0.65 : 0.3),
                     radius: isFocused ? 34 : 12,
                     y: isFocused ? 20 : 6)
-            .animation(.spring(response: 0.34, dampingFraction: 0.74), value: isFocused)
+            .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.74),
+                       value: isFocused)
     }
 }
 
