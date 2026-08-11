@@ -1,3 +1,7 @@
+<div align="center">
+
+<img src="Design/github/icon.png" alt="Sofafin" width="420">
+
 # Sofafin
 
 **Un client Jellyfin natif pour Apple TV.** Écrit en SwiftUI, bâti sur AVKit, pensé
@@ -6,6 +10,10 @@ pour être regardé depuis un canapé plutôt qu'inspecté de près.
 [![Plateforme](https://img.shields.io/badge/plateforme-tvOS%2026%2B-black)](https://developer.apple.com/tvos/)
 [![Swift](https://img.shields.io/badge/Swift-6.0-orange)](https://swift.org)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+
+<img src="Design/github/screenshot-accueil.png" alt="L'accueil de Sofafin" width="100%">
+
+</div>
 
 ---
 
