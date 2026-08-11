@@ -1,6 +1,7 @@
 import AVFoundation
 import AVKit
 import JellyfinKit
+import os
 import SwiftUI
 import UIKit
 
@@ -238,9 +239,13 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         player.replaceCurrentItem(with: playerItem)
         player.appliesMediaSelectionCriteriaAutomatically = true
 
-        seek(playerItem, to: plan.startTime)
         attachObservers(to: playerItem)
         attachDiagnostics(to: playerItem)
+        // La position est atteinte **avant** la première image. Lancer la lecture
+        // sans attendre laissait le film démarrer au début : la barre de
+        // progression annonçait 0:00 pendant plusieurs secondes, et un recul
+        // pendant ce temps repartait du tout début au lieu de la reprise.
+        await seek(playerItem, to: plan.startTime)
         player.play()
         phase = .playing
         // Un démarrage qui n'arrive jamais est le cas le plus déroutant : aucune
@@ -274,31 +279,58 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
 
     // MARK: Positionnement
 
-    /// En HLS, Jellyfin publie une playlist couvrant tout le média : le lecteur se
-    /// déplace donc librement dedans, et la reprise se fait côté client. Jamais
-    /// avant `readyToPlay` cependant — la durée est alors inconnue et le `seek`
+    /// Place la lecture à sa position de reprise, et n'en revient qu'une fois
+    /// que c'est fait.
+    ///
+    /// En HLS, Jellyfin publie une playlist couvrant tout le média : le lecteur
+    /// s'y déplace librement, et la reprise se fait côté client. Pas avant
+    /// `readyToPlay` cependant — la durée est alors inconnue et le déplacement
     /// est ignoré sans erreur.
-    private func seek(_ playerItem: AVPlayerItem, to position: Double) {
+    ///
+    /// L'attente fait partie du contrat : rendre la main trop tôt laisse la barre
+    /// de progression annoncer le début du film, et un recul de l'utilisateur
+    /// pendant ce temps repart de zéro.
+    private func seek(_ playerItem: AVPlayerItem, to position: Double) async {
         guard position > 1 else { return }
         let target = CMTime(seconds: position, preferredTimescale: 600)
 
-        if playerItem.status == .readyToPlay {
-            player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
-            return
+        if playerItem.status != .readyToPlay {
+            await waitUntilReady(playerItem)
         }
-        statusObserver = playerItem.observe(\.status, options: [.new]) { [weak self] item, _ in
-            guard item.status == .readyToPlay else { return }
-            // `Task { @MainActor }` et non `assumeIsolated` : KVO délivre sur la
-            // file qui a modifié la propriété, et AVFoundation ne promet pas que
-            // ce soit la principale. L'affirmer y ferait tomber le processus sans
-            // exception ni trace — le même piège qui a coûté le panneau système.
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
-                // Une seule fois : les repositionnements suivants viennent de l'utilisateur.
-                self.statusObserver = nil
+        await player.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    /// Attend que l'élément soit lisible, sans s'y suspendre indéfiniment.
+    private func waitUntilReady(_ playerItem: AVPlayerItem) async {
+        await withCheckedContinuation { continuation in
+            let resumed = OSAllocatedUnfairLock(initialState: false)
+            let resume: @Sendable () -> Void = {
+                let alreadyResumed = resumed.withLock { done -> Bool in
+                    defer { done = true }
+                    return done
+                }
+                guard !alreadyResumed else { return }
+                continuation.resume()
+            }
+
+            statusObserver = playerItem.observe(\.status, options: [.new, .initial]) { item, _ in
+                // `Task { @MainActor }` et non `assumeIsolated` : KVO délivre sur
+                // la file qui a modifié la propriété, et AVFoundation ne promet
+                // pas que ce soit la principale. L'affirmer y ferait tomber le
+                // processus sans exception ni trace.
+                guard item.status != .unknown else { return }
+                resume()
+            }
+
+            // Un élément qui n'aboutit ni ne échoue laisserait le chargement
+            // suspendu pour toujours : au bout de dix secondes, on démarre et le
+            // diagnostic prendra le relais.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(10))
+                resume()
             }
         }
+        statusObserver = nil
     }
 
     /// La timeline couvre le média entier dans tous les modes : le temps écoulé
