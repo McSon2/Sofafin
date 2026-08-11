@@ -189,8 +189,8 @@ struct DetailView: View {
                     .frame(width: 70)
             }
             .buttonStyle(.glass)
-            .accessibilityLabel(isFavorite ? "Retirer des favoris" : "Ajouter aux favoris")
-            .accessibilityValue(isFavorite ? "Favori" : "Pas en favori")
+            .accessibilityLabel(isFavorite ? L("Retirer des favoris") : L("Ajouter aux favoris"))
+            .accessibilityValue(isFavorite ? L("Favori") : L("Pas en favori"))
 
             Button {
                 Task { await togglePlayed() }
@@ -201,8 +201,8 @@ struct DetailView: View {
                     .frame(width: 70)
             }
             .buttonStyle(.glass)
-            .accessibilityLabel(isPlayed ? "Marquer comme non vu" : "Marquer comme vu")
-            .accessibilityValue(isPlayed ? "Vu" : "Non vu")
+            .accessibilityLabel(isPlayed ? L("Marquer comme non vu") : L("Marquer comme vu"))
+            .accessibilityValue(isPlayed ? L("Vu") : L("Non vu"))
         }
         .padding(.top, 12)
     }
@@ -349,7 +349,7 @@ struct DetailView: View {
                                 [person.name, person.role]
                                     .compactMap(\.self)
                                     .filter { !$0.isEmpty }
-                                    .joined(separator: ", rôle : ")
+                                    .joined(separator: L(", rôle : "))
                             )
                             .accessibilityHint("Affiche les titres avec cette personne")
                         }

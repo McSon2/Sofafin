@@ -124,7 +124,7 @@ final class AppSession {
             phase = .needsSignIn(serverName: stored.serverName)
         } catch {
             // Serveur injoignable : inutile de déconnecter, l'utilisateur retentera.
-            lastError = "Serveur injoignable : \(error.localizedDescription)"
+            lastError = L("Serveur injoignable : \(error.localizedDescription)")
             phase = .needsServer
         }
     }
@@ -135,7 +135,7 @@ final class AppSession {
     func connectToServer(_ input: String) async -> Bool {
         lastError = nil
         guard let url = await JellyfinClient.resolveServerURL(from: input) else {
-            lastError = "Aucun serveur Jellyfin à cette adresse."
+            lastError = L("Aucun serveur Jellyfin à cette adresse.")
             return false
         }
         let probe = JellyfinClient(baseURL: url, identity: identity)
@@ -159,7 +159,7 @@ final class AppSession {
             let result = try await anonymousClient.authenticate(username: username, password: password)
             return await finalizeSignIn(result)
         } catch JellyfinError.unauthorized {
-            lastError = "Identifiant ou mot de passe incorrect."
+            lastError = L("Identifiant ou mot de passe incorrect.")
             return false
         } catch {
             lastError = error.localizedDescription
@@ -180,7 +180,7 @@ final class AppSession {
 
     private func finalizeSignIn(_ result: AuthenticationResult) async -> Bool {
         guard let token = result.accessToken, let account = result.user, let url = serverURL else {
-            lastError = "Réponse d'authentification incomplète."
+            lastError = L("Réponse d'authentification incomplète.")
             return false
         }
         let authenticated = JellyfinClient(

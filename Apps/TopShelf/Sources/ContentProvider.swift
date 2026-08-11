@@ -74,7 +74,7 @@ final class ContentProvider: TVTopShelfContentProvider {
 
         if !resumeItems.isEmpty {
             let section = TVTopShelfItemCollection(items: resumeItems.map { item($0, using: client) })
-            section.title = "Reprendre la lecture"
+            section.title = L("Reprendre la lecture")
             sections.append(section)
         }
 
@@ -84,7 +84,7 @@ final class ContentProvider: TVTopShelfContentProvider {
         let upcoming = nextUpItems.filter { !resumeIds.contains($0.id) }
         if !upcoming.isEmpty {
             let section = TVTopShelfItemCollection(items: upcoming.map { item($0, using: client) })
-            section.title = "Prochains épisodes"
+            section.title = L("Prochains épisodes")
             sections.append(section)
         }
 

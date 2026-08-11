@@ -29,7 +29,7 @@ struct EpisodesPanel: View {
                     .buttonStyle(MediaCardButtonStyle())
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(episode.accessibilityDescription)
-                    .accessibilityValue(episode.id == currentId ? "En cours de lecture" : "")
+                    .accessibilityValue(episode.id == currentId ? L("En cours de lecture") : "")
                     .accessibilityHint("Bascule la lecture sur cet épisode")
                 }
             }
@@ -138,7 +138,7 @@ private struct CastPortrait: View {
             [person.name, person.role]
                 .compactMap(\.self)
                 .filter { !$0.isEmpty }
-                .joined(separator: ", rôle : ")
+                .joined(separator: L(", rôle : "))
         )
     }
 }

@@ -110,7 +110,7 @@ struct HeroBillboard: View {
             .focused($playFocused)
             // Le libellé du bouton ne dit pas de quel titre il s'agit : à
             // l'aveugle, « Reprendre » seul n'apprend rien.
-            .accessibilityLabel("\(playLabel), \(item.rowTitle)")
+            .accessibilityLabel(L("\(playLabel), \(item.rowTitle)"))
 
             // Une collection n'ouvre que sur sa fiche : deux boutons y mèneraient
             // au même endroit.
@@ -124,7 +124,7 @@ struct HeroBillboard: View {
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.glass)
-                .accessibilityLabel("Plus d'infos sur \(item.rowTitle)")
+                .accessibilityLabel(L("Plus d'infos sur \(item.rowTitle)"))
             }
         }
         .padding(.top, 10)
@@ -133,7 +133,7 @@ struct HeroBillboard: View {
     private var isCollection: Bool { item.type == .boxSet }
 
     private var playLabel: String {
-        if isCollection { return "Voir la collection" }
-        return item.resumePosition != nil ? "Reprendre" : "Lecture"
+        if isCollection { return L("Voir la collection") }
+        return item.resumePosition != nil ? L("Reprendre") : L("Lecture")
     }
 }

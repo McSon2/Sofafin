@@ -105,7 +105,7 @@ struct MediaCardMenu: View {
         // ce que fait déjà l'entrée suivante.
         if item.type != .boxSet {
             Button(action: onPlay) {
-                Label(item.resumePosition != nil ? "Reprendre" : "Lecture", systemImage: "play.fill")
+                Label(item.resumePosition != nil ? L("Reprendre") : L("Lecture"), systemImage: "play.fill")
             }
         }
 
@@ -128,7 +128,7 @@ struct MediaCardMenu: View {
             }
         } label: {
             Label(
-                isPlayed ? "Marquer comme non vu" : "Marquer comme vu",
+                isPlayed ? L("Marquer comme non vu") : L("Marquer comme vu"),
                 systemImage: isPlayed ? "eye.slash" : "checkmark.circle"
             )
         }
@@ -142,7 +142,7 @@ struct MediaCardMenu: View {
             }
         } label: {
             Label(
-                isFavorite ? "Retirer des favoris" : "Ajouter aux favoris",
+                isFavorite ? L("Retirer des favoris") : L("Ajouter aux favoris"),
                 systemImage: isFavorite ? "heart.slash" : "heart"
             )
         }
@@ -611,7 +611,7 @@ struct EmptyStateView: View {
     let icon: String
     let title: String
     var message: String?
-    var retryTitle: String = "Réessayer"
+    var retryTitle: LocalizedStringKey = "Réessayer"
     var onRetry: (() -> Void)?
 
     var body: some View {

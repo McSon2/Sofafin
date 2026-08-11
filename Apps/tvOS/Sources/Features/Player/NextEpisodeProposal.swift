@@ -249,7 +249,7 @@ private struct NextEpisodeCard: View {
                 }
                 .buttonStyle(.glassProminent)
                 .focused($isPlayFocused)
-                .accessibilityHint("Passe à \(title)")
+                .accessibilityHint(L("Passe à \(title)"))
 
                 Button("Rester ici", action: onDefer)
                     .buttonStyle(.glass)
@@ -266,8 +266,8 @@ private struct NextEpisodeCard: View {
     }
 
     private var headline: String {
-        guard let remaining, remaining > 0 else { return "À suivre" }
-        return "Épisode suivant dans \(remaining) s"
+        guard let remaining, remaining > 0 else { return L("À suivre") }
+        return L("Épisode suivant dans \(remaining) s")
     }
 
     private func updateRemaining() {

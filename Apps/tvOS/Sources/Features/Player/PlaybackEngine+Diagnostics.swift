@@ -144,10 +144,7 @@ extension PlaybackEngine {
              (NSURLErrorDomain, NSURLErrorNetworkConnectionLost):
             return L("Connexion au serveur perdue pendant la lecture.")
         case ("CoreMediaErrorDomain", let code):
-            return """
-                Le flux est illisible (code \(code)). Le transcodage a probablement échoué \
-                côté serveur — son journal en dira la raison.
-                """
+            return L("Le flux est illisible (code \(code)). Le transcodage a probablement échoué côté serveur — son journal en dira la raison.")
         default:
             return failure.description
         }
@@ -175,11 +172,7 @@ extension PlaybackEngine {
             )
             if let item = player.currentItem { logErrorEntries(of: item) }
 
-            markFailed("""
-                La lecture n'a pas démarré au bout de \(Int(Self.startTimeout)) secondes. \
-                Le serveur accepte la demande mais ne délivre pas le flux — \
-                son transcodage a probablement échoué pour ce fichier.
-                """)
+            markFailed(L("La lecture n'a pas démarré au bout de \(Int(Self.startTimeout)) secondes. Le serveur accepte la demande mais ne délivre pas le flux — son transcodage a probablement échoué pour ce fichier."))
         }
     }
 

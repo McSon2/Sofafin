@@ -48,7 +48,7 @@ struct SearchView: View {
                     EmptyStateView(
                         icon: "questionmark.folder",
                         title: "Aucun résultat",
-                        message: "Rien ne correspond à « \(query) »."
+                        message: L("Rien ne correspond à « \(query) ».")
                     )
                 } else {
                     grid

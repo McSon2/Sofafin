@@ -35,18 +35,18 @@ public enum JellyfinError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .invalidURL(let value):
-            return "Adresse de serveur invalide : \(value)"
+            return L("Adresse de serveur invalide : \(value)")
         case .badResponse:
-            return "Réponse inattendue du serveur."
+            return L("Réponse inattendue du serveur.")
         case .http(let status, let body):
-            if status == 404 { return "Introuvable sur le serveur (404)." }
-            return "Le serveur a répondu \(status)." + (body.map { " \($0)" } ?? "")
+            if status == 404 { return L("Introuvable sur le serveur (404).") }
+            return L("Le serveur a répondu \(status).") + (body.map { " \($0)" } ?? "")
         case .unauthorized:
-            return "Session expirée. Reconnecte-toi au serveur."
+            return L("Session expirée. Reconnecte-toi au serveur.")
         case .decoding(let detail):
-            return "Réponse illisible du serveur : \(detail)"
+            return L("Réponse illisible du serveur : \(detail)")
         case .noPlayableSource:
-            return "Aucune source lisible pour ce média."
+            return L("Aucune source lisible pour ce média.")
         }
     }
 }

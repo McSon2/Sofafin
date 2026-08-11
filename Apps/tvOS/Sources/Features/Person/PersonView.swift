@@ -57,7 +57,7 @@ struct PersonView: View {
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(person.name ?? "Sans nom")
+                Text(person.name ?? L("Sans nom"))
                     .font(Theme.Font.heroTitle)
                     .foregroundStyle(Theme.Palette.primaryText)
                     .lineLimit(1)
