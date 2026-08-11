@@ -229,13 +229,12 @@ final class PlaybackEngine: NSObject, @MainActor AVPlayerViewControllerDelegate 
         // mais un serveur d'une autre version pourrait en servir plusieurs.
         playerItem.startsOnFirstEligibleVariant = true
 
-        // Le lecteur traite un flux HLS comme s'il venait d'Internet : il
-        // constitue un tampon confortable avant d'afficher quoi que ce soit.
-        // Ici le serveur est sur le réseau local et recopie le flux à quatre-
-        // vingt-dix fois le temps réel — cette prudence ne protège de rien et
-        // se voit à chaque démarrage comme à chaque déplacement dans le film.
-        player.automaticallyWaitsToMinimizeStalling = false
-
+        // `automaticallyWaitsToMinimizeStalling` reste à sa valeur par défaut.
+        // Le passer à `false` fait bien démarrer le lecteur sans attendre son
+        // tampon — mais il démarre alors *sans données*, cale aussitôt, et ne
+        // repart jamais : ce réglage transfère à l'application la charge de
+        // surveiller le remplissage et de relancer la lecture, ce qu'elle ne
+        // fait pas. La première image s'affiche et rien ne bouge.
         player.replaceCurrentItem(with: playerItem)
         player.appliesMediaSelectionCriteriaAutomatically = true
 
