@@ -125,24 +125,12 @@ struct HomeView: View {
                     )
                 }
 
-                // Après les rangées de titres — reprises, nouveautés, favoris —
-                // et avant les rangées thématiques : elle introduit la notion de
-                // genre là où celles-ci l'exploitent. La placer plus haut
-                // repousserait « Reprendre la lecture », qui est le geste le plus
-                // fréquent en ouvrant l'application.
+                // En dernier : les rangées au-dessus disent quoi reprendre et
+                // quoi découvrir, celle-ci ouvre le catalogue à qui n'y a rien
+                // trouvé. La placer plus haut repousserait « Reprendre la
+                // lecture », le geste le plus fréquent en ouvrant l'application.
                 GenreRow(title: L("Genres"), showcases: model.genres) { genre in
                     path.append(genre)
-                }
-
-                ForEach(model.genreSections) { section in
-                    MediaRow(
-                        title: section.title,
-                        items: section.items,
-                        layout: section.layout,
-                        onFocus: { spotlightCandidate = $0 },
-                        onOpenDetails: { navigate(to: $0) },
-                        onSelect: { select($0) }
-                    )
                 }
             }
             .padding(.bottom, 80)
