@@ -32,6 +32,7 @@ struct MainTabView: View {
     /// seule façon de les vider quand on choisit un onglet dans la barre.
     @State private var selection: AppTab = .home
     @State private var homePath = NavigationPath()
+    @State private var genresPath = NavigationPath()
     @State private var searchPath = NavigationPath()
     @State private var libraryPaths: [String: NavigationPath] = [:]
 
@@ -43,12 +44,14 @@ struct MainTabView: View {
     enum AppTab: Hashable {
         case home
         case library(String)
+        case genres
         case search
         case settings
 
         var storageKey: String {
             switch self {
             case .home: return "home"
+            case .genres: return "genres"
             case .search: return "search"
             case .settings: return "settings"
             case .library(let id): return "library:\(id)"
@@ -60,6 +63,7 @@ struct MainTabView: View {
         static func from(storageKey: String, libraries: [MediaItem]) -> AppTab? {
             switch storageKey {
             case "home": return .home
+            case "genres": return .genres
             case "search": return .search
             case "settings": return .settings
             default:
@@ -81,6 +85,10 @@ struct MainTabView: View {
                 Tab(library.displayTitle, systemImage: icon(for: library), value: AppTab.library(library.id)) {
                     LibraryView(library: library, path: libraryPath(library.id))
                 }
+            }
+
+            Tab("Genres", systemImage: "theatermasks.fill", value: AppTab.genres) {
+                GenresView(path: $genresPath)
             }
 
             Tab("Rechercher", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
@@ -119,6 +127,8 @@ struct MainTabView: View {
         switch tab {
         case .home:
             homePath = NavigationPath()
+        case .genres:
+            genresPath = NavigationPath()
         case .search:
             searchPath = NavigationPath()
         case .library(let id):
