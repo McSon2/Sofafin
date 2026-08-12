@@ -1,7 +1,9 @@
 {
   "sourceLanguage": "fr",
   "strings": {
-    "%@": {},
+    "%@": {
+      "shouldTranslate": false
+    },
     "%lld collections": {
       "extractionState": "manual",
       "localizations": {
@@ -1777,7 +1779,16 @@
         }
       }
     },
-    "Saisis ce code dans Jellyfin depuis un autre appareil :\nProfil → Connexion rapide.": {},
+    "Saisis ce code dans Jellyfin depuis un autre appareil :\nProfil → Connexion rapide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter this code in Jellyfin from another device:\nProfile → Quick Connect."
+          }
+        }
+      }
+    },
     "Saisis ce code dans Jellyfin depuis un autre appareil :\\nProfil → Connexion rapide.": {
       "extractionState": "manual",
       "localizations": {
@@ -1914,7 +1925,9 @@
         }
       }
     },
-    "Sofafin": {},
+    "Sofafin": {
+      "shouldTranslate": false
+    },
     "Sofafin %@ — lecteur natif pour Jellyfin": {
       "extractionState": "manual",
       "localizations": {

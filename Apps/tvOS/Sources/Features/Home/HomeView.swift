@@ -40,6 +40,9 @@ struct HomeView: View {
                 }
             }
             .ignoresSafeArea(edges: .top)
+            .navigationDestination(for: Genre.self) { genre in
+                GenreView(genre: genre, path: $path)
+            }
             .navigationDestination(for: MediaItem.self) { item in
                 DetailView(item: item)
             }
@@ -109,6 +112,12 @@ struct HomeView: View {
                         onDetails: { navigate(to: $0) }
                     )
                     .padding(.bottom, 12)
+                }
+
+                // Après les rangées de titres et avant les rangées thématiques :
+                // elle introduit la notion de genre là où celles-ci l'exploitent.
+                GenreRow(title: L("Genres"), showcases: model.genres) { genre in
+                    path.append(genre)
                 }
 
                 ForEach(model.sections) { section in

@@ -130,6 +130,10 @@ final class HomeModel {
         // simple « marquer comme vu » redistribuerait les vignettes sous les yeux
         // de l'utilisateur. On ne les construit donc qu'une fois.
         guard genreSections.isEmpty, !built.isEmpty else { return }
+        if genres.isEmpty {
+            genres = (try? await client.movieGenresWithArtwork()) ?? []
+        }
+        guard !Task.isCancelled else { return }
         await appendGenreRows(using: client, seed: movieItems + seriesItems)
     }
 
@@ -143,6 +147,13 @@ final class HomeModel {
         guard !items.isEmpty else { return }
         sections.append(HomeSection(id: id, title: title, layout: layout, items: items))
     }
+
+    /// Les genres de la médiathèque, pour la rangée qui mène à leur page.
+    ///
+    /// Chargés après l'accueil, comme les rangées thématiques : leur constitution
+    /// demande une requête par genre, et l'attendre retarderait tout l'écran pour
+    /// une rangée qui vient loin dans le défilement.
+    private(set) var genres: [GenreShowcase] = []
 
     /// Rangées thématiques déjà construites, conservées d'un rechargement à l'autre.
     private var genreSections: [HomeSection] = []

@@ -127,3 +127,39 @@ struct GenreCard: View {
         .accessibilityHint("Ouvre les films de ce genre")
     }
 }
+
+/// Rangée horizontale de genres, pour l'accueil.
+///
+/// Mêmes cartes que la page dédiée, dans la mise en page des autres rangées :
+/// le genre est un chemin d'accès parmi d'autres, pas une section à part.
+struct GenreRow: View {
+    let title: String
+    let showcases: [GenreShowcase]
+    let onSelect: (Genre) -> Void
+
+    var body: some View {
+        if !showcases.isEmpty {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(title)
+                    .font(Theme.Font.sectionTitle)
+                    .foregroundStyle(Theme.Palette.primaryText)
+                    .padding(.horizontal, Theme.Metrics.screenPadding)
+
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: Theme.Metrics.cardSpacing) {
+                        ForEach(showcases) { showcase in
+                            GenreCard(showcase: showcase) { onSelect(showcase.genre) }
+                        }
+                    }
+                    .padding(.horizontal, Theme.Metrics.screenPadding)
+                    // Sans cette marge, l'agrandissement au focus est rogné.
+                    .padding(.vertical, 40)
+                }
+                .scrollClipDisabled()
+                // Voir `MediaRow` : sans section de focus, quitter la rangée vers
+                // le haut ne trouve aucune cible et le focus reste bloqué.
+                .focusSection()
+            }
+        }
+    }
+}
