@@ -120,7 +120,7 @@ final class HomeModel {
         // Les rangées thématiques sont reportées telles quelles : elles arrivent
         // après coup, et les laisser disparaître le temps d'un rafraîchissement
         // ferait sauter la mise en page sous le focus de l'utilisateur.
-        sections = built + genreSections
+        sections = built
         // Le billboard puise dans les nouveautés : ce sont elles qui donnent envie.
         featured = Array((latestItems.isEmpty ? movieItems : latestItems).prefix(8))
         isLoading = false
@@ -155,8 +155,10 @@ final class HomeModel {
     /// une rangée qui vient loin dans le défilement.
     private(set) var genres: [GenreShowcase] = []
 
-    /// Rangées thématiques déjà construites, conservées d'un rechargement à l'autre.
-    private var genreSections: [HomeSection] = []
+    /// Rangées thématiques déjà construites, conservées d'un rechargement à
+    /// l'autre. Exposées à part des rangées de titres : l'accueil intercale la
+    /// rangée des genres entre les deux familles.
+    private(set) var genreSections: [HomeSection] = []
 
     /// Rangées thématiques construites après coup : l'accueil s'affiche d'abord,
     /// ces requêtes supplémentaires viennent l'enrichir sans le retarder.

@@ -114,13 +114,27 @@ struct HomeView: View {
                     .padding(.bottom, 12)
                 }
 
-                // Après les rangées de titres et avant les rangées thématiques :
-                // elle introduit la notion de genre là où celles-ci l'exploitent.
+                ForEach(model.sections) { section in
+                    MediaRow(
+                        title: section.title,
+                        items: section.items,
+                        layout: section.layout,
+                        onFocus: { spotlightCandidate = $0 },
+                        onOpenDetails: { navigate(to: $0) },
+                        onSelect: { select($0) }
+                    )
+                }
+
+                // Après les rangées de titres — reprises, nouveautés, favoris —
+                // et avant les rangées thématiques : elle introduit la notion de
+                // genre là où celles-ci l'exploitent. La placer plus haut
+                // repousserait « Reprendre la lecture », qui est le geste le plus
+                // fréquent en ouvrant l'application.
                 GenreRow(title: L("Genres"), showcases: model.genres) { genre in
                     path.append(genre)
                 }
 
-                ForEach(model.sections) { section in
+                ForEach(model.genreSections) { section in
                     MediaRow(
                         title: section.title,
                         items: section.items,
