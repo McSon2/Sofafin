@@ -17,9 +17,12 @@ struct GenresView: View {
     /// d'onglets plutôt que sur la première carte.
     @Namespace private var gridFocus
 
+    /// Trois colonnes, pas quatre : une carte paysage fait 480 points de large et
+    /// l'écran n'en offre que 1760 une fois les marges retirées. La quatrième
+    /// débordait, décalant la grille entière et rognant la première colonne.
     private var columns: [GridItem] {
         Array(repeating: GridItem(.fixed(Theme.Metrics.landscapeWidth), spacing: 46),
-              count: 4)
+              count: 3)
     }
 
     var body: some View {
